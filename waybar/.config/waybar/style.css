@@ -62,6 +62,26 @@ tooltip {
     color: #cdd6f4;
 }
 
+#custom-timer {
+    padding: 0 12px;
+    margin: 4px 2px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+#custom-timer.idle {
+    color: #585b70;
+}
+
+#custom-timer.active {
+    color: #33ccff;
+}
+
+#custom-timer:hover {
+    background: rgba(51, 204, 255, 0.15);
+    color: #33ccff;
+}
+
 #custom-updates {
     padding: 0 12px;
     margin: 4px 2px;
