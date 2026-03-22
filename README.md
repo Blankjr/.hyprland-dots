@@ -13,6 +13,7 @@ Managed with [GNU Stow](https://www.gnu.org/software/stow/). Each top-level dire
 | `nvim` | `~/.config/nvim/` | Neovim config |
 | `qt6ct` | `~/.config/qt6ct/` | Qt6 dark theme (Fusion + darker palette) |
 | `mime` | `~/.config/` | Default application associations |
+| `scripts` | `~/.config/menu-scripts/` | Rofi script runner (Super+D) |
 
 ## Usage
 
