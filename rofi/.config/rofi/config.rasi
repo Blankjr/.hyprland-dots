@@ -1,0 +1,99 @@
+configuration {
+    display-drun: "";
+    display-run: "";
+    display-window: "";
+    drun-display-format: "{name}";
+    show-icons: true;
+    icon-theme: "Papirus-Dark";
+    font: "JetBrainsMono Nerd Font 12";
+}
+
+@theme "/dev/null"
+
+* {
+    bg:       rgba(20, 20, 30, 0.92);
+    bg-alt:   rgba(30, 30, 45, 0.95);
+    fg:       #cdd6f4;
+    fg-muted: #7f849c;
+    fg-dim:   #585b70;
+    accent:   #33ccff;
+    green:    #00ff99;
+    urgent:   #f38ba8;
+    border:   rgba(51, 204, 255, 0.4);
+    selected: rgba(51, 204, 255, 0.15);
+}
+
+window {
+    width: 680px;
+    background-color: @bg;
+    border: 2px;
+    border-color: @border;
+    border-radius: 12px;
+    padding: 0;
+}
+
+mainbox {
+    background-color: transparent;
+    children: [ inputbar, listview ];
+    spacing: 0;
+}
+
+inputbar {
+    background-color: @bg-alt;
+    padding: 14px 18px;
+    spacing: 10px;
+    children: [ prompt, entry ];
+    border: 0 0 1px 0;
+    border-color: @border;
+}
+
+prompt {
+    background-color: transparent;
+    text-color: @accent;
+    font: "JetBrainsMono Nerd Font 14";
+    vertical-align: 0.5;
+}
+
+entry {
+    background-color: transparent;
+    text-color: @fg;
+    placeholder: "Search...";
+    placeholder-color: @fg-dim;
+    vertical-align: 0.5;
+}
+
+listview {
+    background-color: transparent;
+    columns: 1;
+    lines: 8;
+    padding: 6px 0;
+    scrollbar: false;
+    fixed-height: true;
+}
+
+element {
+    background-color: transparent;
+    padding: 10px 18px;
+    spacing: 12px;
+}
+
+element selected.normal {
+    background-color: @selected;
+    border-radius: 0;
+}
+
+element-icon {
+    background-color: transparent;
+    size: 24px;
+    vertical-align: 0.5;
+}
+
+element-text {
+    background-color: transparent;
+    text-color: @fg-muted;
+    vertical-align: 0.5;
+}
+
+element-text selected.normal {
+    text-color: @accent;
+}

@@ -1,0 +1,28 @@
+max-visible=3
+sort=-time
+default-timeout=5000
+ignore-timeout=0
+
+font=monospace 11
+width=380
+height=120
+margin=10
+padding=14
+border-size=2
+border-radius=8
+icon-path=/usr/share/icons/Papirus-Dark
+max-icon-size=48
+
+background-color=#1a1a1aee
+text-color=#ffffffdd
+border-color=#33ccffee
+progress-color=over #33ccff44
+
+[urgency=low]
+border-color=#595959aa
+default-timeout=3000
+
+[urgency=critical]
+border-color=#ff5555ee
+text-color=#ff5555
+default-timeout=0

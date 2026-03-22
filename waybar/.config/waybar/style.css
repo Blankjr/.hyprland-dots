@@ -1,0 +1,126 @@
+* {
+    font-family: "JetBrainsMono Nerd Font", "Font Awesome 6 Free", monospace;
+    font-size: 14px;
+    min-height: 0;
+}
+
+window#waybar {
+    background: rgba(20, 20, 30, 0.85);
+    color: #cdd6f4;
+}
+
+tooltip {
+    background: rgba(20, 20, 30, 0.95);
+    border: 1px solid rgba(51, 204, 255, 0.4);
+    border-radius: 8px;
+    color: #cdd6f4;
+}
+
+#workspaces {
+    margin: 4px 8px;
+}
+
+#workspaces button {
+    padding: 2px 10px;
+    margin: 0 2px;
+    border-radius: 6px;
+    color: #00ff99;
+    background: transparent;
+    border: none;
+    transition: all 0.2s ease;
+}
+
+#workspaces button.empty {
+    color: #555;
+}
+
+#workspaces button:hover {
+    background: rgba(51, 204, 255, 0.15);
+    color: #33ccff;
+}
+
+#workspaces button.visible {
+    background: rgba(51, 204, 255, 0.12);
+    color: #66b3cc;
+}
+
+#workspaces button.active {
+    background: rgba(51, 204, 255, 0.25);
+    color: #33ccff;
+    font-weight: bold;
+}
+
+#workspaces button:nth-child(6) {
+    margin-left: 16px;
+    border-left: 3px solid #cdd6f4;
+    border-radius: 0 6px 6px 0;
+    padding-left: 16px;
+}
+
+#clock {
+    padding: 0 14px;
+    color: #cdd6f4;
+}
+
+#custom-updates {
+    padding: 0 12px;
+    margin: 4px 2px;
+    border-radius: 6px;
+    color: #cdd6f4;
+    transition: all 0.2s ease;
+}
+
+#custom-updates.updates-available {
+    color: #a6e3a1;
+}
+
+#custom-updates.up-to-date {
+    color: #585b70;
+}
+
+#custom-updates:hover {
+    background: rgba(51, 204, 255, 0.15);
+    color: #33ccff;
+}
+
+#pulseaudio {
+    padding: 0 12px;
+    margin: 4px 2px;
+    border-radius: 6px;
+    color: #cdd6f4;
+    transition: all 0.2s ease;
+}
+
+#pulseaudio:hover {
+    background: rgba(51, 204, 255, 0.15);
+    color: #33ccff;
+}
+
+#pulseaudio.muted {
+    color: #f38ba8;
+}
+
+#custom-colorpicker,
+#custom-cliphist,
+#custom-power {
+    padding: 0 12px;
+    margin: 4px 2px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+#custom-colorpicker:hover,
+#custom-cliphist:hover {
+    background: rgba(51, 204, 255, 0.15);
+    color: #33ccff;
+}
+
+#custom-power {
+    color: #f38ba8;
+    margin-right: 8px;
+}
+
+#custom-power:hover {
+    background: rgba(243, 139, 168, 0.15);
+    color: #f38ba8;
+}
