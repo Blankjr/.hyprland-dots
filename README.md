@@ -11,6 +11,8 @@ Managed with [GNU Stow](https://www.gnu.org/software/stow/). Each top-level dire
 | `rofi` | `~/.config/rofi/` | App launcher |
 | `waybar` | `~/.config/waybar/` | Status bar + scripts |
 | `nvim` | `~/.config/nvim/` | Neovim config |
+| `qt6ct` | `~/.config/qt6ct/` | Qt6 dark theme (Fusion + darker palette) |
+| `mime` | `~/.config/` | Default application associations |
 
 ## Usage
 
