@@ -1,0 +1,52 @@
+#!/bin/sh
+# Extract archive, wrapping in a folder if it contains multiple root entries (like 7zip does)
+
+FILE="$1"
+DIR="$(dirname "$FILE")"
+BASENAME="$(basename "$FILE")"
+
+# Strip archive extensions to get folder name
+NAME="$BASENAME"
+for ext in .tar.gz .tar.bz2 .tar.xz .tar.zst .tgz .tbz2 .txz .gz .bz2 .xz .zst .zip .7z .rar .tar; do
+    case "$NAME" in
+        *"$ext") NAME="${NAME%"$ext"}"; break ;;
+    esac
+done
+
+# Extract to a temp dir first to check contents
+TMPDIR="$(mktemp -d "$DIR/.extract-XXXXXX")"
+trap 'rm -rf "$TMPDIR"' EXIT
+
+# Try bsdtar first, then gunzip for plain .gz
+if bsdtar -xf "$FILE" -C "$TMPDIR" 2>/dev/null; then
+    :
+elif gunzip -c "$FILE" > "$TMPDIR/$NAME" 2>/dev/null; then
+    :
+else
+    notify-send "Extract Failed" "Cannot extract: $BASENAME"
+    exit 1
+fi
+
+# Count root entries
+ENTRIES=$(ls -A "$TMPDIR" | wc -l)
+
+if [ "$ENTRIES" -eq 1 ]; then
+    # Single root entry — move it directly to destination
+    ITEM=$(ls -A "$TMPDIR")
+    DEST="$DIR/$ITEM"
+    # Avoid overwriting
+    if [ -e "$DEST" ]; then
+        DEST="${DEST}_$(date +%s)"
+    fi
+    mv "$TMPDIR/$ITEM" "$DEST"
+else
+    # Multiple root entries — wrap in a folder named after the archive
+    DEST="$DIR/$NAME"
+    if [ -e "$DEST" ]; then
+        DEST="${DEST}_$(date +%s)"
+    fi
+    mv "$TMPDIR" "$DEST"
+    trap - EXIT
+fi
+
+notify-send "Extracted" "$BASENAME"

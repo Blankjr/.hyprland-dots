@@ -22,4 +22,20 @@
 	<patterns>*</patterns>
 	<directories/>
 </action>
+<action>
+	<icon>extract-archive</icon>
+	<name>Extract Here</name>
+	<submenu></submenu>
+	<unique-id>1774209227830909-3</unique-id>
+	<command>/home/christian/.local/bin/thunar-extract %f</command>
+	<description>Extract archive to current directory</description>
+	<range></range>
+	<patterns>*</patterns>
+	<directories/>
+	<audio-files/>
+	<image-files/>
+	<other-files/>
+	<text-files/>
+	<video-files/>
+</action>
 </actions>
