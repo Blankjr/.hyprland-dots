@@ -103,6 +103,22 @@ tooltip {
     color: #33ccff;
 }
 
+#custom-port-forward {
+    padding: 0 12px;
+    margin: 4px 2px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+#custom-port-forward.active {
+    color: #a6e3a1;
+}
+
+#custom-port-forward:hover {
+    background: rgba(166, 227, 161, 0.15);
+    color: #a6e3a1;
+}
+
 #pulseaudio {
     padding: 0 12px;
     margin: 4px 2px;
@@ -118,6 +134,30 @@ tooltip {
 
 #pulseaudio.muted {
     color: #f38ba8;
+}
+
+#custom-mullvad {
+    padding: 0 12px;
+    margin: 4px 2px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+#custom-mullvad.connected {
+    color: #a6e3a1;
+}
+
+#custom-mullvad.connecting {
+    color: #f9e2af;
+}
+
+#custom-mullvad.disconnected {
+    color: #f38ba8;
+}
+
+#custom-mullvad:hover {
+    background: rgba(51, 204, 255, 0.15);
+    color: #33ccff;
 }
 
 #custom-colorpicker,

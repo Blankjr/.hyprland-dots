@@ -8,7 +8,7 @@
 
     "modules-left": ["hyprland/workspaces"],
     "modules-center": ["clock"],
-    "modules-right": ["custom/timer", "custom/updates", "pulseaudio", "custom/colorpicker", "custom/cliphist", "custom/power"],
+    "modules-right": ["custom/timer", "custom/updates", "custom/mullvad", "pulseaudio", "custom/colorpicker", "custom/cliphist", "custom/power"],
 
     "hyprland/workspaces": {
         "format": "{id}",
@@ -67,6 +67,14 @@
         "format": "󰅌",
         "tooltip-format": "Clipboard",
         "on-click": "cliphist list | rofi -dmenu -p 'Clipboard' | cliphist decode | wl-copy"
+    },
+
+    "custom/mullvad": {
+        "format": "{}",
+        "return-type": "json",
+        "exec": "~/.config/waybar/scripts/mullvad-status.sh",
+        "interval": 5,
+        "on-click": "~/.config/waybar/scripts/mullvad-connect.sh"
     },
 
     "custom/power": {
