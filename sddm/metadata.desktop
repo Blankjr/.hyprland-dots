@@ -1,0 +1,9 @@
+[SddmGreeterTheme]
+Name=dots
+Description=Catppuccin Mocha SDDM theme
+Type=sddm-theme
+Version=1.0
+MainScript=Main.qml
+ConfigFile=theme.conf
+Theme-API=2.0
+Theme-Id=dots
