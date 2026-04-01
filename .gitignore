@@ -2,3 +2,7 @@
 *.swp
 *~
 hypr/.config/hypr/very-old-config/
+
+# AGS generated files
+@girs/
+node_modules/

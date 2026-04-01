@@ -1,0 +1,11 @@
+// Add to modules-right in ~/.config/waybar/config.jsonc:
+// "modules-right": ["...", "pulseaudio", "custom/control-panel", "custom/colorpicker", "..."]
+//
+// Then add this module definition:
+{
+    "custom/control-panel": {
+        "format": "󰶻",
+        "tooltip-format": "Control Panel",
+        "on-click": "ags request toggle-panel"
+    }
+}

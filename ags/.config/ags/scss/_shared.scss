@@ -1,0 +1,102 @@
+.back-button {
+  padding: 8px 12px;
+  border-radius: var(--cp-radius-sm);
+  margin-bottom: var(--cp-gap);
+  transition: all 200ms ease;
+
+  &:hover {
+    background: var(--cp-bg-hover);
+  }
+
+  .back-icon {
+    color: var(--cp-accent);
+    margin-right: 8px;
+    font-size: var(--cp-icon-size);
+  }
+
+  label {
+    font-size: 16px;
+    font-weight: bold;
+  }
+}
+
+.slider-row {
+  padding: 8px 12px;
+  border-radius: var(--cp-radius-sm);
+  spacing: 12px;
+
+  .row-icon {
+    color: var(--cp-accent);
+    font-size: var(--cp-icon-size);
+    min-width: 28px;
+  }
+
+  .row-slider {
+    min-height: 6px;
+
+    trough {
+      background: var(--cp-slider-trough);
+      border-radius: 3px;
+      min-height: 6px;
+    }
+
+    highlight {
+      background: var(--cp-slider-fill);
+      border-radius: 3px;
+    }
+
+    slider {
+      background: var(--cp-accent);
+      border-radius: 50%;
+      min-width: 16px;
+      min-height: 16px;
+      margin: -5px 0;
+    }
+  }
+
+  .row-value {
+    color: var(--cp-text-dim);
+    font-size: 13px;
+    min-width: 45px;
+  }
+
+  &.muted .row-icon {
+    color: var(--cp-red);
+  }
+}
+
+.toggle-row {
+  padding: 8px 12px;
+  border-radius: var(--cp-radius-sm);
+  spacing: 12px;
+
+  .row-icon {
+    color: var(--cp-accent);
+    font-size: var(--cp-icon-size);
+    min-width: 28px;
+  }
+
+  .row-label {
+    color: var(--cp-text);
+  }
+
+  switch {
+    min-width: 48px;
+    min-height: 24px;
+    border-radius: 12px;
+    background: var(--cp-switch-off);
+    transition: all 200ms ease;
+
+    &:checked {
+      background: var(--cp-switch-on);
+    }
+
+    slider {
+      background: var(--cp-text-bright);
+      border-radius: 50%;
+      min-width: 20px;
+      min-height: 20px;
+      margin: 2px;
+    }
+  }
+}

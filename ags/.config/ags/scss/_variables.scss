@@ -1,0 +1,33 @@
+:root {
+  --cp-bg: rgba(20, 20, 30, 0.92);
+  --cp-bg-surface: rgba(30, 30, 45, 0.95);
+  --cp-bg-hover: rgba(51, 204, 255, 0.12);
+  --cp-bg-active: rgba(51, 204, 255, 0.20);
+
+  --cp-text: #cdd6f4;
+  --cp-text-dim: #585b70;
+  --cp-text-bright: #ffffff;
+
+  --cp-accent: #33ccff;
+  --cp-green: #a6e3a1;
+  --cp-red: #f38ba8;
+  --cp-yellow: #f9e2af;
+
+  --cp-border: rgba(51, 204, 255, 0.25);
+  --cp-slider-trough: rgba(51, 204, 255, 0.15);
+  --cp-slider-fill: var(--cp-accent);
+  --cp-switch-on: var(--cp-accent);
+  --cp-switch-off: var(--cp-text-dim);
+  --cp-tile-bg: rgba(40, 40, 60, 0.8);
+  --cp-tile-bg-hover: rgba(51, 204, 255, 0.15);
+
+  --cp-radius: 10px;
+  --cp-radius-sm: 6px;
+  --cp-padding: 16px;
+  --cp-gap: 12px;
+
+  --cp-font: "JetBrainsMono Nerd Font", monospace;
+  --cp-font-size: 14px;
+  --cp-icon-size: 22px;
+  --cp-tile-icon-size: 32px;
+}

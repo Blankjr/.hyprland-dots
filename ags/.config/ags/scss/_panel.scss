@@ -1,0 +1,35 @@
+window.control-panel {
+  background: transparent;
+}
+
+.panel-container {
+  background: var(--cp-bg);
+  border: 1px solid var(--cp-border);
+  border-radius: var(--cp-radius);
+  padding: var(--cp-padding);
+  font-family: var(--cp-font);
+  font-size: var(--cp-font-size);
+  color: var(--cp-text);
+  min-width: 420px;
+}
+
+// Reset GTK4 default button styling
+button {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  min-height: 0;
+  min-width: 0;
+  padding: 0;
+  color: inherit;
+
+  &:hover {
+    background: var(--cp-bg-hover);
+  }
+}
+
+separator {
+  background: var(--cp-border);
+  min-height: 1px;
+  margin: 8px 0;
+}
