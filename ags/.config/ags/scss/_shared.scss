@@ -88,7 +88,7 @@
     transition: all 200ms ease;
 
     &:checked {
-      background: var(--cp-switch-on);
+      background: var(--cp-accent);
     }
 
     slider {
@@ -97,6 +97,32 @@
       min-width: 20px;
       min-height: 20px;
       margin: 2px;
+    }
+  }
+}
+
+.segment-toggle {
+  border-radius: var(--cp-radius);
+  background: var(--cp-tile-bg);
+  padding: 3px;
+
+  .segment-btn {
+    padding: 8px 20px;
+    border-radius: var(--cp-radius-sm);
+    transition: all 200ms ease;
+
+    label {
+      color: var(--cp-text-dim);
+      font-size: 13px;
+    }
+
+    &.segment-active {
+      background: var(--cp-accent);
+
+      label {
+        color: var(--cp-bg);
+        font-weight: bold;
+      }
     }
   }
 }

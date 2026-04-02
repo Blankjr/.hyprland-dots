@@ -13,9 +13,9 @@ import {
   setDefaultSink,
 } from "../lib/audio-service"
 
-export default function SoundMenu({ onBack }: { onBack: () => void }) {
+export default function SoundMenu({ onBack, name }: { onBack: () => void; name?: string }) {
   return (
-    <box cssClasses={["submenu"]} orientation={1}>
+    <box cssClasses={["submenu"]} orientation={1} name={name ?? ""}>
       <BackButton onBack={onBack} label="Sound" />
 
       <SliderRow

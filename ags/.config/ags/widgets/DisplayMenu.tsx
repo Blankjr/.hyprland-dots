@@ -1,6 +1,7 @@
 import BackButton from "./shared/BackButton"
 import SliderRow from "./shared/SliderRow"
 import ToggleRow from "./shared/ToggleRow"
+import SegmentToggle from "./shared/SegmentToggle"
 import {
   brightness,
   brightnessAvailable,
@@ -12,9 +13,9 @@ import {
   toggleDarkMode,
 } from "../lib/display-service"
 
-export default function DisplayMenu({ onBack }: { onBack: () => void }) {
+export default function DisplayMenu({ onBack, name }: { onBack: () => void; name?: string }) {
   return (
-    <box cssClasses={["submenu"]} orientation={1}>
+    <box cssClasses={["submenu"]} orientation={1} name={name ?? ""}>
       <BackButton onBack={onBack} label="Display" />
 
       <revealer revealChild={brightnessAvailable}>
@@ -35,9 +36,9 @@ export default function DisplayMenu({ onBack }: { onBack: () => void }) {
         />
       </revealer>
 
-      <ToggleRow
-        icon={() => (darkMode() ? "󰔎" : "󰔏")}
-        label="Dark Mode"
+      <SegmentToggle
+        leftLabel="󰔏  Light"
+        rightLabel="󰔎  Dark"
         active={darkMode}
         onToggled={toggleDarkMode}
       />

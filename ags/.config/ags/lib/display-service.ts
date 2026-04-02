@@ -1,5 +1,4 @@
 import { createState } from "ags"
-import { interval } from "ags/time"
 import { run, runShell, checkAvailable } from "./shell"
 
 const [brightness, setBrightnessState] = createState(100)
@@ -9,9 +8,10 @@ const [blueLightAvailable, setBlueLightAvailable] = createState(false)
 const [darkMode, setDarkModeState] = createState(false)
 
 let brightnessTimeout: ReturnType<typeof setTimeout> | null = null
+let pollInterval: ReturnType<typeof setInterval> | null = null
+let displayBuses: string[] = []
 
 function parseBrightness(output: string): number {
-  // ddcutil getvcp 10 --brief output: "VCP 10 C 75 100"
   const match = output.match(/VCP\s+10\s+C\s+(\d+)\s+(\d+)/)
   if (!match) return -1
   const current = parseInt(match[1])
@@ -19,11 +19,18 @@ function parseBrightness(output: string): number {
   return Math.round((current / max) * 100)
 }
 
+async function detectDisplays() {
+  const out = await runShell("ddcutil detect --brief 2>/dev/null | grep 'I2C bus:' | awk '{print $3}' | sed 's|/dev/i2c-||'")
+  displayBuses = out.trim().split("\n").filter(b => b.length > 0)
+}
+
 async function pollBrightness() {
-  if (!brightnessAvailable()) return
-  const out = await run(["ddcutil", "getvcp", "10", "--brief"])
+  if (!brightnessAvailable() || displayBuses.length === 0) return
+  const out = await run(["ddcutil", "getvcp", "10", "--brief", "--bus", displayBuses[0]])
   const value = parseBrightness(out)
-  if (value >= 0) setBrightnessState(value)
+  if (value >= 0) {
+    setBrightnessState(value)
+  }
 }
 
 async function pollBlueLight() {
@@ -40,17 +47,33 @@ async function pollDarkMode() {
 }
 
 async function poll() {
-  await Promise.all([pollBrightness(), pollBlueLight()])
+  await Promise.all([pollBrightness(), pollBlueLight(), pollDarkMode()])
+}
+
+export function startPolling() {
+  poll()
+  if (!pollInterval) {
+    pollInterval = setInterval(() => poll(), 5000)
+  }
+}
+
+export function stopPolling() {
+  if (pollInterval) {
+    clearInterval(pollInterval)
+    pollInterval = null
+  }
 }
 
 export function setBrightness(value: number) {
-  // Update UI immediately
   setBrightnessState(value)
 
-  // Debounce the actual ddcutil call (it's slow ~1-2s)
   if (brightnessTimeout) clearTimeout(brightnessTimeout)
   brightnessTimeout = setTimeout(async () => {
-    await run(["ddcutil", "setvcp", "10", value.toString()])
+    await Promise.all(
+      displayBuses.map(bus =>
+        run(["ddcutil", "setvcp", "10", value.toString(), "--bus", bus])
+      ),
+    )
   }, 300)
 }
 
@@ -83,9 +106,7 @@ export async function initDisplayService() {
   setBrightnessAvailable(hasDdcutil)
   setBlueLightAvailable(hasHyprshade)
 
-  await Promise.all([pollBrightness(), pollBlueLight(), pollDarkMode()])
-
-  interval(5000, () => poll())
+  if (hasDdcutil) await detectDisplays()
 }
 
 export {

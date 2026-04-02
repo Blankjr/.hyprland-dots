@@ -26,3 +26,6 @@ default-timeout=3000
 border-color=#ff5555ee
 text-color=#ff5555
 default-timeout=0
+
+[mode=hide]
+invisible=1

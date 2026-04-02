@@ -23,7 +23,13 @@ export default function SliderRow({
     pageIncrement: 0.1,
   })
 
-  // Watch for external state changes
+  const iconLabel = new Gtk.Label({ cssName: "row-icon", label: icon() })
+  iconLabel.cssClasses = ["row-icon"]
+
+  const valueLabel = new Gtk.Label({ label: label(), widthChars: 5 })
+  valueLabel.cssClasses = ["row-value"]
+
+  // Sync external state changes to slider and labels
   const checkInterval = setInterval(() => {
     if (!updating) {
       const v = value()
@@ -32,6 +38,8 @@ export default function SliderRow({
         adj.value = v
         updating = false
       }
+      valueLabel.label = label()
+      iconLabel.label = icon()
     }
   }, 100)
 
@@ -42,7 +50,7 @@ export default function SliderRow({
       if (extra) classes.push(extra)
       return classes
     })()}>
-      <label cssClasses={["row-icon"]} label={icon()} />
+      {iconLabel}
       <slider
         cssClasses={["row-slider"]}
         hexpand
@@ -52,11 +60,13 @@ export default function SliderRow({
           if (!updating) {
             updating = true
             onChanged(self.get_value())
+            valueLabel.label = label()
+            iconLabel.label = icon()
             updating = false
           }
         }}
       />
-      <label cssClasses={["row-value"]} label={label()} widthChars={5} />
+      {valueLabel}
     </box>
   )
 }

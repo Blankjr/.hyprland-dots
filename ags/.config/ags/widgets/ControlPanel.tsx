@@ -7,8 +7,22 @@ import type { SubmenuId } from "../lib/types"
 import MainMenu from "./MainMenu"
 import SoundMenu from "./SoundMenu"
 import DisplayMenu from "./DisplayMenu"
+import { startPolling as startAudio, stopPolling as stopAudio } from "../lib/audio-service"
+import { startPolling as startDisplay, stopPolling as stopDisplay } from "../lib/display-service"
 
 const [activeMenu, setActiveMenu] = createState<SubmenuId>("main-menu")
+
+function stopAllPolling() {
+  stopAudio()
+  stopDisplay()
+}
+
+function navigate(id: SubmenuId) {
+  stopAllPolling()
+  if (id === "sound-menu") startAudio()
+  if (id === "display-menu") startDisplay()
+  setActiveMenu(id)
+}
 
 export function resetMenu() {
   setActiveMenu("main-menu")
@@ -33,6 +47,7 @@ export default function ControlPanel() {
       marginRight={8}
       onNotifyVisible={(self: { visible: boolean }) => {
         if (!self.visible) {
+          stopAllPolling()
           setActiveMenu("main-menu")
         }
       }}
@@ -46,17 +61,17 @@ export default function ControlPanel() {
           <MainMenu
             $type="named"
             name="main-menu"
-            onNavigate={setActiveMenu}
+            onNavigate={navigate}
           />
           <SoundMenu
             $type="named"
             name="sound-menu"
-            onBack={() => setActiveMenu("main-menu")}
+            onBack={() => navigate("main-menu")}
           />
           <DisplayMenu
             $type="named"
             name="display-menu"
-            onBack={() => setActiveMenu("main-menu")}
+            onBack={() => navigate("main-menu")}
           />
         </stack>
       </box>

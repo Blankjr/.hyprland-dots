@@ -3,6 +3,7 @@ import style from "./style.scss"
 import ControlPanel from "./widgets/ControlPanel"
 import { initAudioService } from "./lib/audio-service"
 import { initDisplayService } from "./lib/display-service"
+import { initNotificationService } from "./lib/notification-service"
 
 app.start({
   css: style,
@@ -35,6 +36,7 @@ app.start({
   main() {
     initAudioService()
     initDisplayService()
+    initNotificationService()
     ControlPanel()
   },
 })

@@ -6,20 +6,21 @@
 }
 
 .tile-grid {
-  spacing: var(--cp-gap);
+  margin-top: 4px;
 }
 
 .tile {
   background: var(--cp-tile-bg);
+  border: 3px solid transparent;
   border-radius: var(--cp-radius);
-  padding: 20px 16px;
-  min-width: 80px;
+  padding: 18px 14px;
+  min-width: 100px;
   min-height: 80px;
   transition: all 200ms ease;
 
   &:hover {
     background: var(--cp-tile-bg-hover);
-    border: 1px solid var(--cp-border);
+    border: 3px solid var(--cp-border);
   }
 }
 
@@ -34,11 +35,11 @@
   font-size: 13px;
 }
 
-.tile-disabled {
-  opacity: 0.4;
+.tile-active {
+  background: var(--cp-bg-active);
+  border: 3px solid var(--cp-red);
 
-  &:hover {
-    background: var(--cp-tile-bg);
-    border: none;
+  .tile-icon {
+    color: var(--cp-red);
   }
 }

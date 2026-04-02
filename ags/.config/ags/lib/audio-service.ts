@@ -1,5 +1,4 @@
 import { createState } from "ags"
-import { interval } from "ags/time"
 import { run, runShell } from "./shell"
 import type { AudioOutput } from "./types"
 
@@ -9,6 +8,8 @@ const [sinkVolume, setSinkVolume] = createState(0)
 const [sinkMuted, setSinkMuted] = createState(false)
 const [sourceVolume, setSourceVolume] = createState(0)
 const [sourceMuted, setSourceMuted] = createState(false)
+
+let pollInterval: ReturnType<typeof setInterval> | null = null
 
 function parseVolume(output: string): { volume: number; muted: boolean } {
   const match = output.match(/Volume:\s+([\d.]+)(\s+\[MUTED\])?/)
@@ -69,6 +70,20 @@ async function poll() {
   setSourceMuted(source.muted)
 }
 
+export function startPolling() {
+  poll()
+  if (!pollInterval) {
+    pollInterval = setInterval(() => poll(), 2000)
+  }
+}
+
+export function stopPolling() {
+  if (pollInterval) {
+    clearInterval(pollInterval)
+    pollInterval = null
+  }
+}
+
 export async function setVolume(value: number) {
   await run([
     "wpctl",
@@ -97,8 +112,7 @@ export async function setDefaultSink(id: number) {
 }
 
 export function initAudioService() {
-  poll()
-  interval(2000, () => poll())
+  // no-op at boot — polling starts when submenu opens
 }
 
 export {
