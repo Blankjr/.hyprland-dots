@@ -3,12 +3,12 @@ import { Astal } from "ags/gtk4"
 import Gtk from "gi://Gtk?version=4.0"
 import Gdk from "gi://Gdk?version=4.0"
 import app from "ags/gtk4/app"
-import type { SubmenuId } from "../lib/types"
+import type { SubmenuId } from "../../lib/types"
 import MainMenu from "./MainMenu"
 import SoundMenu from "./SoundMenu"
 import DisplayMenu from "./DisplayMenu"
-import { startPolling as startAudio, stopPolling as stopAudio } from "../lib/audio-service"
-import { startPolling as startDisplay, stopPolling as stopDisplay } from "../lib/display-service"
+import { startPolling as startAudio, stopPolling as stopAudio } from "../../lib/audio-service"
+import { startPolling as startDisplay, stopPolling as stopDisplay } from "../../lib/display-service"
 
 const [activeMenu, setActiveMenu] = createState<SubmenuId>("main-menu")
 
@@ -28,7 +28,7 @@ export function resetMenu() {
   setActiveMenu("main-menu")
 }
 
-export default function ControlPanel() {
+export default function RightPanel() {
   const win = (
     <window
       visible={false}
@@ -81,7 +81,8 @@ export default function ControlPanel() {
   const keyCtrl = new Gtk.EventControllerKey()
   keyCtrl.connect("key-pressed", (_ctrl: unknown, keyval: number) => {
     if (keyval === Gdk.KEY_Escape) {
-      win.hide()
+      app.get_window("control-panel")!.visible = false
+      app.get_window("left-panel")!.visible = false
     }
     return false
   })

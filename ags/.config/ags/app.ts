@@ -1,9 +1,18 @@
 import app from "ags/gtk4/app"
 import style from "./style.scss"
-import ControlPanel from "./widgets/ControlPanel"
+import RightPanel from "./widgets/right-panel/RightPanel"
+import LeftPanel from "./widgets/left-panel/LeftPanel"
 import { initAudioService } from "./lib/audio-service"
 import { initDisplayService } from "./lib/display-service"
 import { initNotificationService } from "./lib/notification-service"
+import { initSystemService } from "./lib/system-service"
+
+function allPanels() {
+  return [
+    app.get_window("control-panel"),
+    app.get_window("left-panel"),
+  ]
+}
 
 app.start({
   css: style,
@@ -11,22 +20,21 @@ app.start({
     const [cmd] = argv
 
     if (cmd === "toggle-panel") {
-      const win = app.get_window("control-panel")
-      if (win) win.visible = !win.visible
+      const panels = allPanels()
+      const newVisible = !panels[0]?.visible
+      panels.forEach((w) => { if (w) w.visible = newVisible })
       response("ok")
       return
     }
 
     if (cmd === "show-panel") {
-      const win = app.get_window("control-panel")
-      if (win) win.visible = true
+      allPanels().forEach((w) => { if (w) w.visible = true })
       response("ok")
       return
     }
 
     if (cmd === "hide-panel") {
-      const win = app.get_window("control-panel")
-      if (win) win.visible = false
+      allPanels().forEach((w) => { if (w) w.visible = false })
       response("ok")
       return
     }
@@ -37,6 +45,8 @@ app.start({
     initAudioService()
     initDisplayService()
     initNotificationService()
-    ControlPanel()
+    initSystemService()
+    RightPanel()
+    LeftPanel()
   },
 })

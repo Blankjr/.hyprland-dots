@@ -1,0 +1,15 @@
+window.left-panel {
+  background: transparent;
+}
+
+.left-panel-container {
+  background: var(--cp-bg);
+  border: 1px solid var(--cp-border);
+  border-radius: var(--cp-radius);
+  padding: var(--cp-padding);
+  font-family: var(--cp-font);
+  font-size: var(--cp-font-size);
+  color: var(--cp-text);
+  min-width: 380px;
+  spacing: 20px;
+}

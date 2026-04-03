@@ -1,7 +1,7 @@
-import BackButton from "./shared/BackButton"
-import SliderRow from "./shared/SliderRow"
-import ToggleRow from "./shared/ToggleRow"
-import SegmentToggle from "./shared/SegmentToggle"
+import BackButton from "../shared/BackButton"
+import SliderRow from "../shared/SliderRow"
+import ToggleRow from "../shared/ToggleRow"
+import SegmentToggle from "../shared/SegmentToggle"
 import {
   brightness,
   brightnessAvailable,
@@ -11,7 +11,7 @@ import {
   setBrightness,
   toggleBlueLight,
   toggleDarkMode,
-} from "../lib/display-service"
+} from "../../lib/display-service"
 
 export default function DisplayMenu({ onBack, name }: { onBack: () => void; name?: string }) {
   return (

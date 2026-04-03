@@ -1,6 +1,6 @@
 import { createMemo } from "ags"
-import type { SubmenuId } from "../lib/types"
-import { dndEnabled, toggleDnd } from "../lib/notification-service"
+import type { SubmenuId } from "../../lib/types"
+import { dndEnabled, toggleDnd } from "../../lib/notification-service"
 
 const navTiles = [
   { id: "sound-menu" as SubmenuId, icon: "󰕾", label: "Sound" },

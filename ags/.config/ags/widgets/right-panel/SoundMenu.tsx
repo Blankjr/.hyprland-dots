@@ -1,7 +1,7 @@
 import Gtk from "gi://Gtk?version=4.0"
-import BackButton from "./shared/BackButton"
-import SliderRow from "./shared/SliderRow"
-import ToggleRow from "./shared/ToggleRow"
+import BackButton from "../shared/BackButton"
+import SliderRow from "../shared/SliderRow"
+import ToggleRow from "../shared/ToggleRow"
 import {
   sinks,
   sinkVolume,
@@ -11,7 +11,7 @@ import {
   toggleSinkMute,
   toggleSourceMute,
   setDefaultSink,
-} from "../lib/audio-service"
+} from "../../lib/audio-service"
 
 export default function SoundMenu({ onBack, name }: { onBack: () => void; name?: string }) {
   return (
