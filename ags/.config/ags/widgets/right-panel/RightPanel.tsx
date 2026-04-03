@@ -1,4 +1,3 @@
-import { createState } from "ags"
 import { Astal } from "ags/gtk4"
 import Gtk from "gi://Gtk?version=4.0"
 import Gdk from "gi://Gdk?version=4.0"
@@ -10,7 +9,7 @@ import DisplayMenu from "./DisplayMenu"
 import { startPolling as startAudio, stopPolling as stopAudio } from "../../lib/audio-service"
 import { startPolling as startDisplay, stopPolling as stopDisplay } from "../../lib/display-service"
 
-const [activeMenu, setActiveMenu] = createState<SubmenuId>("main-menu")
+let stack: Gtk.Stack | null = null
 
 function stopAllPolling() {
   stopAudio()
@@ -21,14 +20,27 @@ function navigate(id: SubmenuId) {
   stopAllPolling()
   if (id === "sound-menu") startAudio()
   if (id === "display-menu") startDisplay()
-  setActiveMenu(id)
+  if (stack) stack.visibleChildName = id
 }
 
 export function resetMenu() {
-  setActiveMenu("main-menu")
+  if (stack) stack.visibleChildName = "main-menu"
 }
 
 export default function RightPanel() {
+  stack = new Gtk.Stack({
+    transitionType: Gtk.StackTransitionType.SLIDE_LEFT_RIGHT,
+    transitionDuration: 200,
+  })
+  stack.add_named(MainMenu({ onNavigate: navigate }) as Gtk.Widget, "main-menu")
+  stack.add_named(SoundMenu({ onBack: () => navigate("main-menu") }) as Gtk.Widget, "sound-menu")
+  stack.add_named(DisplayMenu({ onBack: () => navigate("main-menu") }) as Gtk.Widget, "display-menu")
+  stack.visibleChildName = "main-menu"
+
+  const container = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL })
+  container.cssClasses = ["panel-container"]
+  container.append(stack)
+
   const win = (
     <window
       visible={false}
@@ -48,33 +60,11 @@ export default function RightPanel() {
       onNotifyVisible={(self: { visible: boolean }) => {
         if (!self.visible) {
           stopAllPolling()
-          setActiveMenu("main-menu")
+          resetMenu()
         }
       }}
     >
-      <box cssClasses={["panel-container"]} orientation={1}>
-        <stack
-          visibleChildName={activeMenu}
-          transitionType={Gtk.StackTransitionType.SLIDE_LEFT_RIGHT}
-          transitionDuration={200}
-        >
-          <MainMenu
-            $type="named"
-            name="main-menu"
-            onNavigate={navigate}
-          />
-          <SoundMenu
-            $type="named"
-            name="sound-menu"
-            onBack={() => navigate("main-menu")}
-          />
-          <DisplayMenu
-            $type="named"
-            name="display-menu"
-            onBack={() => navigate("main-menu")}
-          />
-        </stack>
-      </box>
+      {container}
     </window>
   ) as Gtk.Window
 

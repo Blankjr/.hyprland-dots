@@ -23,10 +23,6 @@
   .cal-nav {
     margin-bottom: 8px;
 
-    .cal-nav-group {
-      spacing: 2px;
-    }
-
     .cal-nav-label {
       color: var(--cp-text);
       font-weight: bold;
@@ -58,10 +54,6 @@
       min-width: 36px;
       min-height: 28px;
     }
-  }
-
-  .cal-row {
-    spacing: 0;
   }
 
   .cal-day {
