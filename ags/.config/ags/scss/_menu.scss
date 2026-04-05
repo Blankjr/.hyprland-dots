@@ -43,3 +43,12 @@
     color: var(--cp-red);
   }
 }
+
+.tile-awake-active {
+  background: rgba(166, 227, 161, 0.15);
+  border: 3px solid var(--cp-green);
+
+  .tile-icon {
+    color: var(--cp-green);
+  }
+}

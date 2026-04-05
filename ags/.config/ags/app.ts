@@ -6,6 +6,7 @@ import { initAudioService } from "./lib/audio-service"
 import { initDisplayService } from "./lib/display-service"
 import { initNotificationService } from "./lib/notification-service"
 import { initSystemService } from "./lib/system-service"
+import { initAwakeService } from "./lib/awake-service"
 
 function allPanels() {
   return [
@@ -46,6 +47,7 @@ app.start({
     initDisplayService()
     initNotificationService()
     initSystemService()
+    initAwakeService()
     RightPanel()
     LeftPanel()
   },
