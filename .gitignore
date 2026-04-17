@@ -2,6 +2,7 @@
 *.swp
 *~
 hypr/.config/hypr/very-old-config/
+hypr/.config/hypr/wallpapers/
 
 # AGS generated files
 @girs/

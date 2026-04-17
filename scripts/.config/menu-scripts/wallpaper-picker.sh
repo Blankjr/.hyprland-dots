@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-WALLPAPER_DIR="${WALLPAPER_DIR:-$HOME/Pictures/Wallpapers}"
+WALLPAPER_DIR="$HOME/.dots/hypr/.config/hypr/wallpapers"
 
 if [[ ! -d "$WALLPAPER_DIR" ]]; then
     notify-send "Wallpaper Picker" "$WALLPAPER_DIR does not exist"
@@ -25,7 +25,5 @@ choice="$(printf '%s\n' "${names[@]}" | rofi -dmenu -p 'Wallpaper' -i)" || exit 
 
 selected="$WALLPAPER_DIR/$choice"
 
-pgrep -x swww-daemon >/dev/null || swww-daemon &
-
-swww img "$selected" --transition-type grow --transition-duration 1
+hyprctl hyprpaper wallpaper ",$selected"
 notify-send "Wallpaper" "Set to $(basename "$selected")"
