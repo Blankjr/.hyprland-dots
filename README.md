@@ -59,3 +59,25 @@ To preview without logging out:
 ```bash
 sddm-greeter-qt6 --test-mode --theme /usr/share/sddm/themes/dots
 ```
+
+### RX 6700 XT Blank Screen on Boot
+
+The RX 6700 XT (RDNA2) can get stuck in a low power state after shutdown, causing no video output on next boot. Fix by disabling GPU runtime power management:
+
+```bash
+sudo vim /etc/default/grub
+```
+
+Add `amdgpu.runpm=0` to `GRUB_CMDLINE_LINUX_DEFAULT`: 
+GRUB_CMDLINE_LINUX_DEFAULT='nowatchdog nvme_load=YES zswap.enabled=0 splash loglevel=3 amdgpu.runpm=0'
+
+then regenerate GRUB config:
+
+```bash
+sudo grub-mkconfig -o /boot/grub/grub.cfg
+```
+
+BIOS — `Settings → Advanced → Power Management Setup`:
+- `ErP Ready` → Enabled
+- `Settings → Advanced → Wake Up Event Setup` → all wake sources Disabled
+
