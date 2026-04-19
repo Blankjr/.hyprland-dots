@@ -8,7 +8,7 @@
 
     "modules-left": ["hyprland/workspaces"],
     "modules-center": ["clock"],
-    "modules-right": ["custom/timer", "custom/updates", "custom/mullvad", "pulseaudio", "custom/control-panel", "custom/colorpicker", "custom/cliphist", "custom/power"],
+    "modules-right": ["custom/timer", "custom/updates", "tray", "custom/mullvad", "pulseaudio", "custom/control-panel", "custom/colorpicker", "custom/cliphist", "custom/power"],
 
     "hyprland/workspaces": {
         "format": "{id}",
@@ -73,6 +73,11 @@
         "format": "󰅌",
         "tooltip-format": "Clipboard",
         "on-click": "cliphist list | rofi -dmenu -p 'Clipboard' | cliphist decode | wl-copy"
+    },
+
+    "tray": {
+        "icon-size": 18,
+        "spacing": 8
     },
 
     "custom/mullvad": {
