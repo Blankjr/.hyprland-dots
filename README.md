@@ -15,6 +15,7 @@ Managed with [GNU Stow](https://www.gnu.org/software/stow/). Each top-level dire
 | `mime` | `~/.config/` | Default application associations |
 | `scripts` | `~/.config/menu-scripts/` | Rofi script runner (Super+D) |
 | `ags` | `~/.config/ags/` | AGS sidebar (display, sound, menus) |
+| `secrets` | `~/.config/secrets/` | Env files with tokens (real `.env` is gitignored) |
 | `sddm` | — | SDDM login theme (manual install, see below) |
 
 ## Usage
@@ -44,6 +45,26 @@ echo "i2c-dev" | sudo tee /etc/modules-load.d/i2c-dev.conf
 Optional dependencies (features are hidden automatically if not installed):
 - `ddcutil` — external monitor brightness via DDC/CI
 - `hyprshade` — blue light filter
+
+### Local Scripts
+
+`~/.dots/localscripts/` is added to `$PATH` in `config.fish`, `.zshrc`, and `.bashrc` directly (no stow). Drop any executable in there and it's instantly callable from fish, zsh, and bash — no relink step.
+
+```bash
+chmod +x ~/.dots/localscripts/<new-script>
+```
+
+### Secrets
+
+The `secrets` package ships `*.env.example` templates only. After `stow secrets`, copy the example and fill in real values:
+
+```bash
+cp ~/.config/secrets/forgejo.env.example ~/.config/secrets/forgejo.env
+chmod 600 ~/.config/secrets/forgejo.env
+# edit and fill in FORGEJO_TOKEN etc.
+```
+
+The real `*.env` files live in the repo but are gitignored.
 
 ### SDDM Install
 

@@ -7,3 +7,7 @@ hypr/.config/hypr/wallpapers/
 # AGS generated files
 @girs/
 node_modules/
+
+# Real secrets (templates with .example suffix are committed)
+secrets/.config/secrets/*.env
+!secrets/.config/secrets/*.env.example

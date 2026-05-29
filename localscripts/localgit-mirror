@@ -1,0 +1,54 @@
+#!/bin/bash
+set -euo pipefail
+
+ENV_FILE="${FORGEJO_ENV_FILE:-$HOME/.config/secrets/forgejo.env}"
+
+if [ ! -f "$ENV_FILE" ]; then
+  echo "Error: env file not found: $ENV_FILE" >&2
+  echo "Copy $HOME/.config/secrets/forgejo.env.example and fill it in." >&2
+  exit 1
+fi
+
+# shellcheck disable=SC1090
+source "$ENV_FILE"
+
+: "${FORGEJO_URL:?missing FORGEJO_URL in $ENV_FILE}"
+: "${FORGEJO_TOKEN:?missing FORGEJO_TOKEN in $ENV_FILE}"
+: "${FORGEJO_SSH_REMOTE_BASE:?missing FORGEJO_SSH_REMOTE_BASE in $ENV_FILE}"
+
+BASE_DIR="${1:-$PWD}"
+
+echo "Scanning $BASE_DIR for git repos..."
+echo ""
+
+for dir in "$BASE_DIR"/*/; do
+  if [ ! -d "$dir/.git" ]; then
+    echo "⏭ Skipping $dir (not a git repo)"
+    continue
+  fi
+
+  repo=$(basename "$dir")
+  branch=$(git -C "$dir" branch --show-current 2>/dev/null || true)
+
+  if [ -z "$branch" ]; then
+    echo "⏭ Skipping $repo (no branch detected)"
+    continue
+  fi
+
+  echo "→ Creating $repo on Forgejo..."
+  curl -s -X POST "$FORGEJO_URL/api/v1/user/repos" \
+    -H "Authorization: token $FORGEJO_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"name\": \"$repo\", \"private\": true, \"auto_init\": false}" | jq -r '.full_name // .message'
+
+  echo "→ Setting nova remote for $repo..."
+  git -C "$dir" remote remove nova 2>/dev/null || true
+  git -C "$dir" remote add nova "${FORGEJO_SSH_REMOTE_BASE}/${repo}.git"
+
+  echo "→ Pushing $repo ($branch)..."
+  git -C "$dir" push -u nova "$branch" 2>&1 | tail -2
+
+  echo ""
+done
+
+echo "Done!"
