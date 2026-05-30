@@ -50,13 +50,6 @@ tooltip {
     font-weight: bold;
 }
 
-#workspaces button:nth-child(6) {
-    margin-left: 16px;
-    border-left: 3px solid #cdd6f4;
-    border-radius: 0 6px 6px 0;
-    padding-left: 16px;
-}
-
 #clock {
     padding: 0 14px;
     color: #cdd6f4;

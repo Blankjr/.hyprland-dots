@@ -46,6 +46,27 @@ Optional dependencies (features are hidden automatically if not installed):
 - `ddcutil` — external monitor brightness via DDC/CI
 - `hyprshade` — blue light filter
 
+### Hyprland Plugin: split-monitor-workspaces
+
+Provides awesomewm-style per-monitor workspaces (each monitor gets its own 1–10). Config is in `hypr/.config/hypr/conf.d/plugins.conf`; `autostart.conf` runs `hyprpm reload -n` each session to load it.
+
+One-time install (needs build deps):
+
+```bash
+sudo pacman -S --needed cmake cpio pkgconf git gcc
+hyprpm add https://github.com/zjeffer/split-monitor-workspaces
+hyprpm enable split-monitor-workspaces
+hyprpm reload
+```
+
+After each Hyprland update, rebuild against the new headers:
+
+```bash
+hyprpm update
+```
+
+If `monitor_priority` in `plugins.conf` references connector names that no longer exist (e.g. DP-3/DP-2 renumbered after a driver change), update the list — first entry gets workspaces 1–10, second gets 11–20.
+
 ### Local Scripts
 
 `~/.dots/localscripts/` is added to `$PATH` in `config.fish`, `.zshrc`, and `.bashrc` directly (no stow). Drop any executable in there and it's instantly callable from fish, zsh, and bash — no relink step.
