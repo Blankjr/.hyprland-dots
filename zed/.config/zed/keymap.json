@@ -1,0 +1,17 @@
+// Zed keymap — versioned in ~/.dots (stow package: zed)
+// Run `zed: open default keymap` from the command palette to see all defaults.
+[
+  {
+    "bindings": {
+      // VS Code-style: toggle the file explorer (left dock holds the project panel).
+      // Overrides the default ctrl-e (file finder); ctrl-p still opens the file finder.
+      "ctrl-e": "workspace::ToggleLeftDock",
+
+      // Toggle the Claude agent chat (right dock holds the agent panel).
+      // NOTE: binding ctrl-k directly shadows Zed's ctrl-k *chord* shortcuts
+      // (e.g. `ctrl-k ctrl-t` theme picker). Reach those via the command palette,
+      // or rebind this to a non-chord key (e.g. "ctrl-'") if you want the chords back.
+      "ctrl-k": "workspace::ToggleRightDock"
+    }
+  }
+]

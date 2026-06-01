@@ -1,0 +1,30 @@
+// Zed settings — versioned in ~/.dots (stow package: zed)
+// Run `zed: open default settings` from the command palette to see every option.
+{
+  "vim_mode": false,
+  // Claude Code via the ACP adapter (uses your Claude subscription, not an API key)
+  "agent_servers": {
+    "claude-acp": {
+      "type": "registry"
+    }
+  },
+  "telemetry": {
+    "diagnostics": false,
+    "metrics": false
+  },
+  "ui_font_size": 16,
+  "buffer_font_size": 15,
+  "theme": {
+    "mode": "system",
+    "light": "One Light",
+    "dark": "Ayu Mirage"
+  },
+  // VS Code-like layout: file explorer on the left, Claude agent chat on the right.
+  // keymap.json toggles these docks with ctrl-e / ctrl-k.
+  "project_panel": {
+    "dock": "left"
+  },
+  "agent": {
+    "dock": "right"
+  }
+}

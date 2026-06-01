@@ -11,6 +11,7 @@ Managed with [GNU Stow](https://www.gnu.org/software/stow/). Each top-level dire
 | `rofi` | `~/.config/rofi/` | App launcher |
 | `waybar` | `~/.config/waybar/` | Status bar + scripts |
 | `nvim` | `~/.config/nvim/` | Neovim config |
+| `zed` | `~/.config/zed/` | Zed editor (settings + keymap; Claude agent via ACP) |
 | `qt6ct` | `~/.config/qt6ct/` | Qt6 dark theme (Fusion + darker palette) |
 | `mime` | `~/.config/` | Default application associations |
 | `scripts` | `~/.config/menu-scripts/` | Rofi script runner (Super+D) |
