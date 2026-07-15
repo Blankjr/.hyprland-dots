@@ -15,15 +15,24 @@ if [[ ${#images[@]} -eq 0 ]]; then
     exit 1
 fi
 
-names=()
-for img in "${images[@]}"; do
-    names+=("$(realpath --relative-to="$WALLPAPER_DIR" "$img")")
-done
-
-choice="$(printf '%s\n' "${names[@]}" | rofi -dmenu -p 'Wallpaper' -i)" || exit 0
+choice="$(
+    for img in "${images[@]}"; do
+        name="$(realpath --relative-to="$WALLPAPER_DIR" "$img")"
+        printf '%s\0icon\x1f%s\n' "$name" "$img"
+    done | rofi -dmenu -p 'Wallpaper' -i -show-icons \
+        -theme-str 'window { width: 920px; }' \
+        -theme-str 'listview { lines: 5; }' \
+        -theme-str 'element { padding: 8px 18px; spacing: 18px; }' \
+        -theme-str 'element-icon { size: 160px; }'
+)" || exit 0
 [[ -z "$choice" ]] && exit 0
 
 selected="$WALLPAPER_DIR/$choice"
+
+if [[ ! -f "$selected" ]]; then
+    notify-send "Wallpaper Picker" "$choice was not found"
+    exit 1
+fi
 
 hyprctl hyprpaper wallpaper ",$selected"
 notify-send "Wallpaper" "Set to $(basename "$selected")"
