@@ -55,6 +55,28 @@ tooltip {
     color: #cdd6f4;
 }
 
+#custom-codex-usage {
+    padding: 0 12px;
+    margin: 4px 2px;
+    border-radius: 6px;
+    color: #cdd6f4;
+    transition: all 0.2s ease;
+}
+
+#custom-codex-usage.warning {
+    color: #f9e2af;
+}
+
+#custom-codex-usage.critical,
+#custom-codex-usage.error {
+    color: #f38ba8;
+}
+
+#custom-codex-usage:hover {
+    background: rgba(51, 204, 255, 0.15);
+    color: #33ccff;
+}
+
 #custom-timer {
     padding: 0 12px;
     margin: 4px 2px;

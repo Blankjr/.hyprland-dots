@@ -7,7 +7,7 @@
 
     "modules-left": ["hyprland/workspaces"],
     "modules-center": ["clock"],
-    "modules-right": ["custom/timer", "custom/updates", "tray", "custom/mullvad", "pulseaudio", "custom/control-panel", "custom/colorpicker", "custom/cliphist", "custom/power"],
+    "modules-right": ["custom/codex-usage", "custom/timer", "custom/updates", "tray", "custom/mullvad", "pulseaudio", "custom/control-panel", "custom/colorpicker", "custom/cliphist", "custom/power"],
 
     // Per-monitor workspaces via split-monitor-workspaces plugin.
     // Mi Monitor owns IDs 1-10, BenQ owns 11-20 — both render as "1".."10" via format-icons.
@@ -33,6 +33,13 @@
                 "today": "<b><u>{}</u></b>"
             }
         }
+    },
+
+    "custom/codex-usage": {
+        "exec": "~/.config/waybar/scripts/codex-usage.sh",
+        "return-type": "json",
+        "interval": 120,
+        "tooltip": true
     },
 
     "custom/timer": {
