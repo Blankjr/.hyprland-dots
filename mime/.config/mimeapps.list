@@ -62,3 +62,4 @@ application/x-shellscript=code-oss.desktop
 # Directories -> Thunar (default), VS Code (secondary)
 inode/directory=thunar.desktop;code-oss.desktop
 x-scheme-handler/claude-cli=claude-code-url-handler.desktop
+x-scheme-handler/t3code=t3code.desktop
