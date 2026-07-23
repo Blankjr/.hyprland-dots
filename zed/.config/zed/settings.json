@@ -1,6 +1,7 @@
 // Zed settings — versioned in ~/.dots (stow package: zed)
 // Run `zed: open default settings` from the command palette to see every option.
 {
+  "cli_default_open_behavior": "new_window",
   "git_panel": {
     "tree_view": true
   },
