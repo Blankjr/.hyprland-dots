@@ -76,6 +76,14 @@ If `monitor_priority` in `plugins.conf` references connector names that no longe
 chmod +x ~/.dots/localscripts/<new-script>
 ```
 
+To serve the current folder on localhost and print links to every HTML page:
+
+```bash
+serve-html
+serve-html --open
+serve-html ./some-folder --port 8080
+```
+
 ### Secrets
 
 The `secrets` package ships `*.env.example` templates only. After `stow secrets`, copy the example and fill in real values:

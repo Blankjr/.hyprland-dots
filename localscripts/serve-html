@@ -1,0 +1,146 @@
+#!/usr/bin/env python3
+"""Serve a folder on localhost and print links to its HTML pages."""
+
+from __future__ import annotations
+
+import argparse
+import functools
+import os
+import sys
+import webbrowser
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from urllib.parse import quote
+
+
+DEFAULT_PORT = 8000
+PORT_ATTEMPTS = 100
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Serve a folder on localhost and list its HTML pages.",
+    )
+    parser.add_argument(
+        "directory",
+        nargs="?",
+        default=".",
+        help="folder to serve (default: current folder)",
+    )
+    parser.add_argument(
+        "-p",
+        "--port",
+        type=int,
+        help=f"port to use (default: first available from {DEFAULT_PORT})",
+    )
+    parser.add_argument(
+        "-o",
+        "--open",
+        action="store_true",
+        help="open the index or first HTML page in the default browser",
+    )
+    return parser.parse_args()
+
+
+def terminal_link(url: str) -> str:
+    """Make a clickable terminal link while keeping the URL copyable."""
+    if sys.stdout.isatty() and os.environ.get("TERM") != "dumb":
+        return f"\033]8;;{url}\033\\{url}\033]8;;\033\\"
+    return url
+
+
+def html_pages(root: Path) -> list[Path]:
+    return sorted(
+        (
+            path.relative_to(root)
+            for path in root.rglob("*")
+            if path.is_file() and path.suffix.lower() in {".html", ".htm"}
+        ),
+        key=lambda path: path.as_posix().lower(),
+    )
+
+
+def page_url(base_url: str, page: Path) -> str:
+    return base_url + quote(page.as_posix(), safe="/")
+
+
+def start_server(
+    root: Path, requested_port: int | None
+) -> tuple[ThreadingHTTPServer, int]:
+    handler = functools.partial(SimpleHTTPRequestHandler, directory=str(root))
+    ports = (
+        [requested_port]
+        if requested_port is not None
+        else range(DEFAULT_PORT, DEFAULT_PORT + PORT_ATTEMPTS)
+    )
+    last_error: OSError | None = None
+
+    for port in ports:
+        try:
+            server = ThreadingHTTPServer(("127.0.0.1", port), handler)
+            return server, port
+        except OSError as error:
+            last_error = error
+
+    if requested_port is None:
+        raise OSError(
+            f"no available port found from {DEFAULT_PORT} "
+            f"to {DEFAULT_PORT + PORT_ATTEMPTS - 1}"
+        ) from last_error
+    raise last_error or OSError(f"could not bind to port {requested_port}")
+
+
+def main() -> int:
+    args = parse_args()
+    root = Path(args.directory).expanduser().resolve()
+
+    if not root.is_dir():
+        print(f"serve-html: not a directory: {root}", file=sys.stderr)
+        return 2
+    if args.port is not None and not 1 <= args.port <= 65535:
+        print("serve-html: port must be between 1 and 65535", file=sys.stderr)
+        return 2
+
+    try:
+        server, port = start_server(root, args.port)
+    except OSError as error:
+        print(f"serve-html: could not start server: {error}", file=sys.stderr)
+        return 1
+
+    base_url = f"http://127.0.0.1:{port}/"
+    pages = html_pages(root)
+
+    print(f"Serving {root}")
+    print(f"Directory: {terminal_link(base_url)}")
+    if pages:
+        print("\nHTML pages:")
+        for page in pages:
+            print(f"  {terminal_link(page_url(base_url, page))}")
+    else:
+        print("\nNo .html or .htm files found.")
+    print("\nPress Ctrl+C to stop.")
+
+    if args.open:
+        index = next(
+            (page for page in pages if page.as_posix().lower() == "index.html"),
+            None,
+        )
+        target = (
+            base_url
+            if index or not pages
+            else page_url(base_url, pages[0])
+        )
+        webbrowser.open(target)
+
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nStopped.")
+    finally:
+        server.server_close()
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
