@@ -32,7 +32,7 @@ Send commands: `ags request toggle-panel`
 
 ## Hyprland Config
 
-Split config at `hypr/.config/hypr/hyprland.conf` sources files from `conf.d/` in order. `programs.conf` defines variables (`$terminal`, `$menu`, etc.) used by `autostart.conf` and `keybindings.conf` — order matters.
+The entry point is `hypr/.config/hypr/hyprland.lua`, split into modules under `lua/`. `lua/workspaces.lua` configures the pinned `split-monitor-workspaces` Lua submodule under `plugins/`. The legacy `hyprland.conf` and `conf.d/*.conf` files are retained only as migration rollback material.
 
 The `very-old-config/` directory is legacy/archived (gitignored) and should be ignored.
 

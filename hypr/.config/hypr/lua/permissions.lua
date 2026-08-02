@@ -1,0 +1,10 @@
+-- Permission enforcement remains disabled, matching the legacy configuration.
+-- Permission changes require a Hyprland restart and are not applied on reload.
+--
+-- hl.config({
+--     ecosystem = {
+--         enforce_permissions = true,
+--     },
+-- })
+-- hl.permission("/usr/(bin|local/bin)/grim", "screencopy", "allow")
+-- hl.permission("/usr/(lib|libexec|lib64)/xdg-desktop-portal-hyprland", "screencopy", "allow")

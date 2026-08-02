@@ -9,9 +9,9 @@
     "modules-center": ["clock"],
     "modules-right": ["custom/codex-usage", "custom/timer", "custom/updates", "tray", "custom/mullvad", "pulseaudio", "custom/control-panel", "custom/colorpicker", "custom/cliphist", "custom/power"],
 
-    // Per-monitor workspaces via split-monitor-workspaces plugin.
+    // Per-monitor workspaces via the split-monitor-workspaces Lua package.
     // Mi Monitor owns IDs 1-10, BenQ owns 11-20 — both render as "1".."10" via format-icons.
-    // If monitor_priority changes in hypr/plugins.conf, update these mappings to match.
+    // If monitor_priority changes in hypr/lua/workspaces.lua, update these mappings to match.
     "hyprland/workspaces": {
         "format": "{icon}",
         "format-icons": {
@@ -21,8 +21,8 @@
             "16": "6", "17": "7", "18": "8", "19": "9", "20": "10"
         },
         "all-outputs": false,
-        "on-scroll-up": "hyprctl dispatch split-cycleworkspaces -1",
-        "on-scroll-down": "hyprctl dispatch split-cycleworkspaces +1"
+        "on-scroll-up": "hyprctl eval 'require(\"lua.workspaces\").cycle_workspaces(\"prev\")()'",
+        "on-scroll-down": "hyprctl eval 'require(\"lua.workspaces\").cycle_workspaces(\"next\")()'"
     },
 
     "clock": {

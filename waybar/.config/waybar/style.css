@@ -39,11 +39,7 @@ tooltip {
     color: #33ccff;
 }
 
-#workspaces button.visible {
-    background: rgba(51, 204, 255, 0.12);
-    color: #66b3cc;
-}
-
+#workspaces button.visible,
 #workspaces button.active {
     background: rgba(51, 204, 255, 0.25);
     color: #33ccff;

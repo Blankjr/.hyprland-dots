@@ -4,7 +4,7 @@ chosen=$(printf " Lock\n󰗽 Logout\n󰤄 Suspend\n Reboot\n⏻ Shutdown" | rofi
 
 case "$chosen" in
     *Lock)     hyprlock ;;
-    *Logout)   hyprctl dispatch exit ;;
+    *Logout)   uwsm stop ;;
     *Suspend)  systemctl suspend ;;
     *Reboot)   systemctl reboot ;;
     *Shutdown) systemctl poweroff ;;

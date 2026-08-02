@@ -1,114 +1,85 @@
 #!/bin/sh
 # Show Hyprland keybindings in a floating kitty terminal as a two-column grid.
-# When called without args: spawns floating kitty.
+# When called without args: toggles the floating kitty window.
 # When called with --display: renders the grid (called by kitty).
 
 if [ "$1" != "--display" ]; then
-    kitty --class keybind-helper -e "$0" --display
-    exit 0
+    address=$(hyprctl clients -j | jq -r '
+        [.[] | select(
+            .class == "keybind-helper" or
+            .initialClass == "keybind-helper"
+        ) | .address][0] // empty
+    ')
+
+    if [ -n "$address" ]; then
+        hyprctl dispatch \
+            "hl.dsp.window.close({ window = \"address:$address\" })" \
+            >/dev/null
+        exit 0
+    fi
+
+    exec kitty \
+        --class keybind-helper \
+        --override confirm_os_window_close=0 \
+        -e "$0" --display
 fi
 
 python3 << 'PYEOF'
-import os, re, sys, shutil
+import json
+import os
+import shutil
+import subprocess
 
-CONF = os.path.expanduser("~/.config/hypr/conf.d/keybindings.conf")
-
-GROUPS = {
-    "Switch workspaces":   ("Super + 1-0",           "Workspaces 1–10"),
-    "Move active window":  ("Super + Shift + 1-0",   "Move window to workspace"),
-    "Move focus with":     ("Super + Arrows",        "Move focus"),
-    "Scroll through":      ("Super + Scroll",        "Cycle workspaces"),
-    "Move/resize windows": ("Super + LMB / RMB",     "Move / resize windows"),
+GROUPED = {
+    "Switch workspace": ("Super + 1–0", "Workspaces 1–10"),
+    "Move window to workspace": ("Super + Shift + 1–0", "Move window to workspace"),
+    "Move focus": ("Super + Arrows", "Move focus"),
+    "Cycle workspaces": ("Super + Scroll", "Cycle workspaces"),
 }
-SKIP_SECTIONS = ("Laptop multimedia", "Requires playerctl")
-SKIP_COMMENTS = ("See ", "Example binds", 'Sets "', "KEYBINDINGS", "Example special")
 
-FRIENDLY_DISPATCH = {
-    "killactive":            "Close window",
-    "togglefloating":        "Toggle floating",
-    "pseudo":                "Pseudo tiling",
-    "togglesplit":           "Toggle split",
-    "togglespecialworkspace": "Toggle scratchpad",
-}
-FRIENDLY_EXEC = {
-    "$terminal":    "Terminal",
-    "$fileManager": "File manager",
+MODIFIERS = (
+    (64, "Super"),
+    (4, "Ctrl"),
+    (8, "Alt"),
+    (1, "Shift"),
+)
+
+KEY_NAMES = {
+    "RETURN": "Return",
+    "SPACE": "Space",
+    "TAB": "Tab",
+    "left": "Left",
+    "right": "Right",
+    "up": "Up",
+    "down": "Down",
 }
 
 def parse():
+    result = subprocess.run(
+        ["hyprctl", "binds", "-j"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    binds = json.loads(result.stdout)
     entries = []
-    comment = ""
-    skip = False
+    grouped_seen = set()
 
-    with open(CONF) as f:
-        for raw in f:
-            line = raw.strip()
+    for item in binds:
+        description = item.get("description", "")
+        key = item.get("key", "")
+        if not description or key.startswith("XF86") or "mouse" in key.lower():
+            continue
 
-            if not line:
-                skip = False
-                comment = ""
-                continue
+        if description in GROUPED:
+            if description not in grouped_seen:
+                entries.append(GROUPED[description])
+                grouped_seen.add(description)
+            continue
 
-            if line.startswith("#"):
-                text = re.sub(r"^#+ *", "", line)
-                if any(text.startswith(s) for s in SKIP_COMMENTS):
-                    continue
-                if text.startswith("bind"):
-                    continue
-                for pat in SKIP_SECTIONS:
-                    if pat in text:
-                        skip = True
-                        break
-                else:
-                    for pat, val in GROUPS.items():
-                        if pat in text:
-                            skip = True
-                            entries.append(val)
-                            break
-                    else:
-                        comment = text
-                continue
-
-            if not line.startswith("bind") or skip:
-                continue
-
-            line = re.sub(r"^bind\w*\s*=\s*", "", line)
-            parts = [p.strip() for p in line.split(",")]
-            if len(parts) < 3:
-                comment = ""
-                continue
-
-            mods, key, action = parts[0], parts[1], parts[2]
-            args = " ".join(p for p in parts[3:] if p)
-            args = re.sub(r"#.*$", "", args).strip()
-
-            if "mouse" in key.lower() or "XF86" in key:
-                comment = ""
-                continue
-
-            mods = (mods.replace("$mainMod", "Super")
-                        .replace("SHIFT", "Shift")
-                        .replace("ALT_L", "Alt"))
-            key = key.replace("RETURN", "Return").replace("SPACE", "Space")
-            keys = " + ".join(mods.split() + [key]) if mods else key
-
-            if comment:
-                desc = comment
-                comment = ""
-            elif action == "exec":
-                desc = FRIENDLY_EXEC.get(args)
-                if not desc:
-                    cmd = args.split("|")[0].strip()
-                    prog = re.sub(r".*/|\.sh$", "", cmd.split()[0]) if cmd else action
-                    desc = prog.replace("-", " ").title()
-            elif action in FRIENDLY_DISPATCH:
-                desc = FRIENDLY_DISPATCH[action]
-            elif action == "movetoworkspace":
-                desc = "Move to scratchpad" if "special:" in args else f"Move to workspace {args}"
-            else:
-                desc = f"{action} {args}".strip() if args else action
-
-            entries.append((keys, desc))
+        keys = [name for mask, name in MODIFIERS if item.get("modmask", 0) & mask]
+        keys.append(KEY_NAMES.get(key, key))
+        entries.append((" + ".join(keys), description))
 
     return entries
 
