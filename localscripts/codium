@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+script_dir=${BASH_SOURCE[0]%/*}
+
+if [[ -x /usr/bin/codium ]]; then
+    editor_command=(/usr/bin/codium)
+elif [[ -x /usr/bin/vscodium ]]; then
+    editor_command=(/usr/bin/vscodium)
+elif command -v flatpak >/dev/null 2>&1 \
+    && flatpak info com.vscodium.codium >/dev/null 2>&1; then
+    editor_command=(flatpak run com.vscodium.codium)
+else
+    echo "codium: VSCodium is not installed or could not be located" >&2
+    exit 127
+fi
+
+exec "$script_dir/grouped-editor-launch" \
+    '^(codium|VSCodium|com\.vscodium\.codium)$' \
+    "${editor_command[@]}" \
+    "$@"
