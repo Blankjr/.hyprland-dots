@@ -1,0 +1,336 @@
+#!/usr/bin/env bash
+# Manage a local, Vulkan-accelerated Ollama server.
+
+set -u
+
+readonly MODEL="${LOCAL_AI_MODEL:-dolphin3:8b-llama3.1-q8_0}"
+readonly OLLAMA_ADDRESS="127.0.0.1:11434"
+readonly API_URL="http://${OLLAMA_ADDRESS}"
+readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
+if [[ -n "${XDG_RUNTIME_DIR:-}" ]]; then
+    readonly STATE_DIR="${XDG_RUNTIME_DIR}/local-ai"
+else
+    readonly STATE_DIR="/tmp/local-ai-${UID}"
+fi
+
+readonly PID_FILE="${STATE_DIR}/ollama.pid"
+readonly LOG_FILE="${STATE_DIR}/ollama.log"
+
+usage() {
+    cat <<'EOF'
+Usage: local-ai <command> [arguments]
+
+Commands:
+  start                              Start the local Ollama server
+  chat [MODEL]                       Chat in the terminal (default: Dolphin 3)
+  summarize [--model MODEL] PATH...  Summarize local files or folders
+  ask [--model MODEL] QUESTION PATH...
+                                     Ask about local files or folders
+  pull MODEL                         Download a model into Ollama's local store
+  status                             Show server and CPU/GPU model status
+  stop                               Stop the server started by this helper
+  logs [-f]                          Show the server log, optionally following it
+  help                               Show this help
+EOF
+}
+
+error() {
+    printf 'local-ai: %s\n' "$*" >&2
+}
+
+require_command() {
+    if ! command -v "$1" >/dev/null 2>&1; then
+        error "required command not found: $1"
+        return 1
+    fi
+}
+
+init_state_dir() {
+    if ! mkdir -p "$STATE_DIR" || ! chmod 700 "$STATE_DIR"; then
+        error "could not create private state directory: ${STATE_DIR}"
+        return 1
+    fi
+}
+
+api_ready() {
+    curl --fail --silent --max-time 1 "${API_URL}/api/tags" >/dev/null 2>&1
+}
+
+read_managed_pid() {
+    local pid
+
+    [[ -r "$PID_FILE" ]] || return 1
+    IFS= read -r pid < "$PID_FILE"
+    [[ "$pid" =~ ^[0-9]+$ ]] || return 1
+    printf '%s\n' "$pid"
+}
+
+is_ollama_server() {
+    local pid="$1"
+    local -a args=()
+
+    kill -0 "$pid" 2>/dev/null || return 1
+    mapfile -d '' -t args < "/proc/${pid}/cmdline" 2>/dev/null || return 1
+    [[ "${args[0]##*/}" == "ollama" && "${args[1]:-}" == "serve" ]]
+}
+
+clean_stale_pid() {
+    local pid
+
+    pid="$(read_managed_pid)" || {
+        [[ -e "$PID_FILE" ]] && rm -f "$PID_FILE"
+        return
+    }
+
+    if ! is_ollama_server "$pid"; then
+        rm -f "$PID_FILE"
+    fi
+}
+
+start_server() {
+    local pid
+    local attempt
+
+    require_command ollama || return 1
+    require_command curl || return 1
+    init_state_dir || return 1
+    clean_stale_pid
+
+    if pid="$(read_managed_pid)" && is_ollama_server "$pid"; then
+        if api_ready; then
+            printf 'Local AI server is already running (PID %s).\n' "$pid"
+            return
+        fi
+        error "managed Ollama process ${pid} is running but its API is unavailable"
+        error "inspect ${LOG_FILE}"
+        return 1
+    fi
+
+    if api_ready; then
+        error "an unmanaged Ollama server is already listening on ${OLLAMA_ADDRESS}"
+        error "stop it before using local-ai so Vulkan acceleration can be enforced"
+        return 1
+    fi
+
+    : > "$LOG_FILE"
+    OLLAMA_VULKAN=1 OLLAMA_HOST="$OLLAMA_ADDRESS" \
+        nohup ollama serve </dev/null >>"$LOG_FILE" 2>&1 &
+    pid=$!
+    printf '%s\n' "$pid" > "$PID_FILE"
+
+    for ((attempt = 0; attempt < 100; attempt++)); do
+        if api_ready; then
+            if ! is_ollama_server "$pid"; then
+                rm -f "$PID_FILE"
+                error "the API became ready, but its process is not the managed Ollama server"
+                return 1
+            fi
+            printf 'Local AI server started (PID %s).\n' "$pid"
+            printf 'API: %s\n' "$API_URL"
+            printf 'Run: local-ai chat\n'
+            return
+        fi
+
+        if ! kill -0 "$pid" 2>/dev/null; then
+            rm -f "$PID_FILE"
+            error "Ollama exited before its API became ready"
+            error "inspect ${LOG_FILE}"
+            return 1
+        fi
+        sleep 0.1
+    done
+
+    error "Ollama did not become ready within 10 seconds"
+    error "inspect ${LOG_FILE}"
+    return 1
+}
+
+chat() {
+    local model="${1:-$MODEL}"
+
+    require_command ollama || return 1
+    require_command curl || return 1
+
+    if ! api_ready; then
+        error "the local server is not running; run 'local-ai start' first"
+        return 1
+    fi
+
+    OLLAMA_HOST="$OLLAMA_ADDRESS" exec ollama run "$model"
+}
+
+pull_model() {
+    local model="$1"
+
+    require_command ollama || return 1
+    require_command curl || return 1
+
+    if ! api_ready; then
+        error "the local server is not running; run 'local-ai start' first"
+        return 1
+    fi
+
+    OLLAMA_HOST="$OLLAMA_ADDRESS" exec ollama pull "$model"
+}
+
+run_file_assistant() {
+    require_command python3 || return 1
+
+    if [[ ! -r "${SCRIPT_DIR}/local-ai-files" ]]; then
+        error "file assistant helper not found: ${SCRIPT_DIR}/local-ai-files"
+        return 1
+    fi
+
+    exec python3 "${SCRIPT_DIR}/local-ai-files" "$@"
+}
+
+status() {
+    local pid
+    local process_output
+
+    require_command ollama || return 1
+    require_command curl || return 1
+    init_state_dir || return 1
+    clean_stale_pid
+
+    if ! api_ready; then
+        printf 'Server: stopped\n'
+        return
+    fi
+
+    if pid="$(read_managed_pid)" && is_ollama_server "$pid"; then
+        printf 'Server: running (managed, PID %s)\n' "$pid"
+    else
+        printf 'Server: running (unmanaged)\n'
+    fi
+    printf 'API: %s\n' "$API_URL"
+    printf 'Log: %s\n\n' "$LOG_FILE"
+
+    process_output="$(OLLAMA_HOST="$OLLAMA_ADDRESS" ollama ps)" || return 1
+    printf '%s\n' "$process_output"
+
+    if [[ "$(printf '%s\n' "$process_output" | wc -l)" -le 1 ]]; then
+        printf '\nNo model is loaded. Start a chat before checking GPU use.\n'
+    elif [[ "$process_output" == *"100% GPU"* ]]; then
+        printf '\nGPU check: passed (model is fully loaded on the GPU).\n'
+    else
+        printf '\nGPU check: FAILED (model is not fully loaded on the GPU).\n' >&2
+        return 1
+    fi
+}
+
+stop_server() {
+    local pid
+    local attempt
+
+    init_state_dir || return 1
+    clean_stale_pid
+
+    if ! pid="$(read_managed_pid)" || ! is_ollama_server "$pid"; then
+        if api_ready; then
+            error "an unmanaged Ollama server is running; refusing to stop it"
+            return 1
+        fi
+        printf 'Local AI server is already stopped.\n'
+        return
+    fi
+
+    kill "$pid"
+    for ((attempt = 0; attempt < 50; attempt++)); do
+        if ! kill -0 "$pid" 2>/dev/null; then
+            rm -f "$PID_FILE"
+            printf 'Local AI server stopped.\n'
+            return
+        fi
+        sleep 0.1
+    done
+
+    error "Ollama did not stop within 5 seconds (PID ${pid})"
+    return 1
+}
+
+show_logs() {
+    init_state_dir || return 1
+
+    if [[ ! -f "$LOG_FILE" ]]; then
+        error "no server log exists yet; run 'local-ai start' first"
+        return 1
+    fi
+
+    case "${1:-}" in
+        "")
+            tail -n 100 "$LOG_FILE"
+            ;;
+        -f)
+            tail -n 100 -f "$LOG_FILE"
+            ;;
+        *)
+            error "usage: local-ai logs [-f]"
+            return 2
+            ;;
+    esac
+}
+
+main() {
+    local command="${1:-help}"
+    shift || true
+
+    case "$command" in
+        start)
+            [[ $# -eq 0 ]] || {
+                error "usage: local-ai start"
+                return 2
+            }
+            start_server
+            ;;
+        chat)
+            [[ $# -le 1 ]] || {
+                error "usage: local-ai chat [MODEL]"
+                return 2
+            }
+            chat "$@"
+            ;;
+        summarize|ask)
+            run_file_assistant "$command" "$@"
+            ;;
+        pull)
+            [[ $# -eq 1 ]] || {
+                error "usage: local-ai pull MODEL"
+                return 2
+            }
+            pull_model "$1"
+            ;;
+        status)
+            [[ $# -eq 0 ]] || {
+                error "usage: local-ai status"
+                return 2
+            }
+            status
+            ;;
+        stop)
+            [[ $# -eq 0 ]] || {
+                error "usage: local-ai stop"
+                return 2
+            }
+            stop_server
+            ;;
+        logs)
+            [[ $# -le 1 ]] || {
+                error "usage: local-ai logs [-f]"
+                return 2
+            }
+            show_logs "$@"
+            ;;
+        help|-h|--help)
+            usage
+            ;;
+        *)
+            error "unknown command: $command"
+            usage >&2
+            return 2
+            ;;
+    esac
+}
+
+main "$@"

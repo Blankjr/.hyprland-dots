@@ -1,0 +1,697 @@
+#!/usr/bin/env bash
+# Manage the local Vulkan image server and its generated files.
+
+set -u
+
+readonly MODEL_NAME="flux2-klein-4b"
+readonly SAMPLE_STEPS="${LOCAL_IMAGE_AI_STEPS:-4}"
+readonly DATA_DIR="${LOCAL_IMAGE_AI_DATA_DIR:-${HOME}/.local/share/local-image-ai}"
+readonly SERVER="${LOCAL_IMAGE_AI_SERVER:-${DATA_DIR}/bin/sd-server}"
+readonly DIFFUSION_MODEL="${LOCAL_IMAGE_AI_DIFFUSION_MODEL:-${LOCAL_IMAGE_AI_MODEL:-${DATA_DIR}/models/flux-2-klein-4b-Q8_0.gguf}}"
+readonly TEXT_ENCODER="${LOCAL_IMAGE_AI_TEXT_ENCODER:-${DATA_DIR}/models/Qwen3-4B-Q4_K_M.gguf}"
+readonly VAE_MODEL="${LOCAL_IMAGE_AI_VAE_MODEL:-${DATA_DIR}/models/flux2-vae.safetensors}"
+readonly ADDRESS="127.0.0.1:1234"
+readonly API_URL="http://${ADDRESS}"
+
+if [[ -n "${XDG_RUNTIME_DIR:-}" ]]; then
+    readonly STATE_DIR="${XDG_RUNTIME_DIR}/local-image-ai"
+else
+    readonly STATE_DIR="/tmp/local-image-ai-${UID}"
+fi
+
+readonly SETTINGS_DIR="${XDG_STATE_HOME:-${HOME}/.local/state}/local-image-ai"
+readonly OUTPUT_DIR_FILE="${SETTINGS_DIR}/output-directory"
+readonly DEFAULT_OUTPUT_DIR="${HOME}/Pictures/AI Images"
+readonly PID_FILE="${STATE_DIR}/server.pid"
+readonly JOB_FILE="${STATE_DIR}/active-job"
+readonly LOG_FILE="${STATE_DIR}/server.log"
+
+generation_request_file=""
+generation_submit_file=""
+generation_status_file=""
+generation_reference_b64=""
+generation_job_id=""
+
+usage() {
+    cat <<'EOF'
+Usage: local-image-ai <command> [arguments]
+
+Commands:
+  start                         Start the Vulkan image service
+  status                        Show service status
+  stop                          Stop generation and the image service
+  generate [--size WxH] PROMPT [REFERENCE]
+                                Generate one PNG (default: 1024x1024)
+  cancel                        Stop the active generation
+  copy FILE                     Copy a generated PNG to the clipboard
+  output-dir                    Print the preferred save directory
+  set-output-dir DIRECTORY      Remember the preferred save directory
+  save FILE [DIRECTORY]         Save with the dated incremental filename
+  logs [-f]                     Show the server log
+  help                          Show this help
+EOF
+}
+
+error() {
+    printf 'local-image-ai: %s\n' "$*" >&2
+}
+
+require_command() {
+    if ! command -v "$1" >/dev/null 2>&1; then
+        error "required command not found: $1"
+        return 1
+    fi
+}
+
+init_state_dir() {
+    if ! mkdir -p "$STATE_DIR" || ! chmod 700 "$STATE_DIR"; then
+        error "could not create private state directory: ${STATE_DIR}"
+        return 1
+    fi
+}
+
+api_ready() {
+    curl --fail --silent --max-time 1 "${API_URL}/sdcpp/v1/capabilities" >/dev/null 2>&1
+}
+
+read_managed_pid() {
+    local pid
+
+    [[ -r "$PID_FILE" ]] || return 1
+    IFS= read -r pid < "$PID_FILE"
+    [[ "$pid" =~ ^[0-9]+$ ]] || return 1
+    printf '%s\n' "$pid"
+}
+
+is_image_server() {
+    local pid="$1"
+    local -a args=()
+
+    kill -0 "$pid" 2>/dev/null || return 1
+    mapfile -d '' -t args < "/proc/${pid}/cmdline" 2>/dev/null || return 1
+    [[ "${args[0]##*/}" == "sd-server" ]]
+}
+
+clean_stale_state() {
+    local pid
+
+    pid="$(read_managed_pid)" || {
+        [[ -e "$PID_FILE" ]] && rm -f "$PID_FILE"
+        return
+    }
+
+    if ! is_image_server "$pid"; then
+        rm -f "$PID_FILE" "$JOB_FILE"
+    fi
+}
+
+start_server() {
+    local pid
+    local attempt
+
+    require_command curl || return 1
+    [[ -x "$SERVER" ]] || {
+        error "server executable not found: ${SERVER}"
+        return 1
+    }
+    [[ -r "$DIFFUSION_MODEL" ]] || {
+        error "diffusion model not found: ${DIFFUSION_MODEL}"
+        return 1
+    }
+    [[ -r "$TEXT_ENCODER" ]] || {
+        error "text encoder not found: ${TEXT_ENCODER}"
+        return 1
+    }
+    [[ -r "$VAE_MODEL" ]] || {
+        error "VAE model not found: ${VAE_MODEL}"
+        return 1
+    }
+    init_state_dir || return 1
+    clean_stale_state
+
+    if pid="$(read_managed_pid)" && is_image_server "$pid"; then
+        if api_ready; then
+            printf 'Image service is already running (PID %s).\n' "$pid"
+            return
+        fi
+        error "managed image server ${pid} is running but its API is unavailable"
+        error "inspect ${LOG_FILE}"
+        return 1
+    fi
+
+    if api_ready; then
+        error "an unmanaged service is already listening on ${ADDRESS}"
+        return 1
+    fi
+
+    : > "$LOG_FILE"
+    nohup "$SERVER" \
+        --diffusion-model "$DIFFUSION_MODEL" \
+        --llm "$TEXT_ENCODER" \
+        --vae "$VAE_MODEL" \
+        --backend Vulkan0 \
+        --offload-to-cpu \
+        --max-vram 11 \
+        --diffusion-fa \
+        --vae-tiling \
+        --listen-ip 127.0.0.1 \
+        --listen-port 1234 \
+        --width 1024 \
+        --height 1024 \
+        --steps "$SAMPLE_STEPS" \
+        --cfg-scale 1.0 \
+        --sampling-method euler \
+        --seed -1 \
+        </dev/null >>"$LOG_FILE" 2>&1 &
+    pid=$!
+    printf '%s\n' "$pid" > "$PID_FILE"
+
+    for ((attempt = 0; attempt < 600; attempt++)); do
+        if api_ready; then
+            if ! is_image_server "$pid"; then
+                rm -f "$PID_FILE"
+                error "the API became ready, but its process is not the managed image server"
+                return 1
+            fi
+            printf 'Image service started (PID %s).\n' "$pid"
+            return
+        fi
+
+        if ! kill -0 "$pid" 2>/dev/null; then
+            rm -f "$PID_FILE"
+            error "image server exited before its API became ready"
+            error "inspect ${LOG_FILE}"
+            return 1
+        fi
+        sleep 0.1
+    done
+
+    error "image server did not become ready within 60 seconds"
+    error "inspect ${LOG_FILE}"
+    return 1
+}
+
+cancel_generation() {
+    local job_id
+    local http_code
+    local pid
+    local attempt
+
+    require_command curl || return 1
+    init_state_dir || return 1
+
+    if [[ ! -r "$JOB_FILE" ]]; then
+        printf 'No image generation is active.\n'
+        return
+    fi
+
+    IFS= read -r job_id < "$JOB_FILE"
+    [[ "$job_id" =~ ^[A-Za-z0-9_-]+$ ]] || {
+        rm -f "$JOB_FILE"
+        error "invalid active job id"
+        return 1
+    }
+
+    http_code="$(
+        curl --silent --show-error \
+        --output /dev/null \
+        --write-out '%{http_code}' \
+        --request POST \
+        "${API_URL}/sdcpp/v1/jobs/${job_id}/cancel"
+    )" || return 1
+
+    case "$http_code" in
+        200)
+            printf 'Cancellation requested for %s.\n' "$job_id"
+            return
+            ;;
+        404|410)
+            rm -f "$JOB_FILE"
+            printf 'Image generation is no longer active.\n'
+            return
+            ;;
+        409)
+            ;;
+        *)
+            error "image server rejected cancellation (HTTP ${http_code})"
+            return 1
+            ;;
+    esac
+
+    if ! pid="$(read_managed_pid)" || ! is_image_server "$pid"; then
+        error "generation cannot be hard-stopped because the image server is unmanaged"
+        return 1
+    fi
+
+    kill "$pid"
+    for ((attempt = 0; attempt < 100; attempt++)); do
+        if ! kill -0 "$pid" 2>/dev/null; then
+            rm -f "$PID_FILE" "$JOB_FILE"
+            start_server || return 1
+            printf 'Generation stopped; image service restarted.\n'
+            return
+        fi
+        sleep 0.1
+    done
+
+    error "image server did not stop during cancellation (PID ${pid})"
+    return 1
+}
+
+stop_server() {
+    local pid
+    local attempt
+
+    init_state_dir || return 1
+    clean_stale_state
+
+    if [[ -r "$JOB_FILE" ]]; then
+        local job_id
+        IFS= read -r job_id < "$JOB_FILE"
+        if [[ "$job_id" =~ ^[A-Za-z0-9_-]+$ ]]; then
+            curl --silent --request POST \
+                "${API_URL}/sdcpp/v1/jobs/${job_id}/cancel" >/dev/null 2>&1 || true
+        fi
+    fi
+
+    if ! pid="$(read_managed_pid)" || ! is_image_server "$pid"; then
+        if api_ready; then
+            error "an unmanaged image server is running; refusing to stop it"
+            return 1
+        fi
+        rm -f "$JOB_FILE"
+        printf 'Image service is already stopped.\n'
+        return
+    fi
+
+    kill "$pid"
+    for ((attempt = 0; attempt < 100; attempt++)); do
+        if ! kill -0 "$pid" 2>/dev/null; then
+            rm -f "$PID_FILE" "$JOB_FILE"
+            printf 'Image service stopped.\n'
+            return
+        fi
+        sleep 0.1
+    done
+
+    error "image server did not stop within 10 seconds (PID ${pid})"
+    return 1
+}
+
+status() {
+    local pid
+
+    require_command curl || return 1
+    init_state_dir || return 1
+    clean_stale_state
+
+    if ! api_ready; then
+        printf 'Server: stopped\n'
+        return
+    fi
+
+    if pid="$(read_managed_pid)" && is_image_server "$pid"; then
+        printf 'Server: running (managed, PID %s)\n' "$pid"
+    else
+        printf 'Server: running (unmanaged)\n'
+    fi
+    printf 'Model: %s\n' "$MODEL_NAME"
+    printf 'API: %s\n' "$API_URL"
+}
+
+generate_image() {
+    local prompt="$1"
+    local reference="${2:-}"
+    local size="${3:-1024x1024}"
+    local width
+    local height
+    local request_file=""
+    local submit_file=""
+    local status_file=""
+    local reference_b64=""
+    local reference_mime=""
+    local job_id=""
+    local http_code
+    local job_status=""
+    local previous_status=""
+    local message
+    local result_file
+    local attempt
+
+    generation_request_file=""
+    generation_submit_file=""
+    generation_status_file=""
+    generation_reference_b64=""
+    generation_job_id=""
+
+    if [[ ! "$size" =~ ^([0-9]+)x([0-9]+)$ ]]; then
+        error "invalid size: ${size} (expected WIDTHxHEIGHT)"
+        return 2
+    fi
+    width=$((10#${BASH_REMATCH[1]}))
+    height=$((10#${BASH_REMATCH[2]}))
+    if ((width < 256 || width > 1024 || height < 256 || height > 1024)); then
+        error "width and height must each be between 256 and 1024"
+        return 2
+    fi
+    if ((width % 8 != 0 || height % 8 != 0)); then
+        error "width and height must each be a multiple of 8"
+        return 2
+    fi
+
+    require_command base64 || return 1
+    require_command curl || return 1
+    require_command file || return 1
+    require_command jq || return 1
+    init_state_dir || return 1
+
+    [[ -n "$prompt" ]] || {
+        error "prompt cannot be empty"
+        return 2
+    }
+    api_ready || {
+        error "image service is off"
+        return 1
+    }
+    [[ ! -e "$JOB_FILE" ]] || {
+        error "another image generation is already active"
+        return 1
+    }
+    if [[ -n "$reference" && ! -r "$reference" ]]; then
+        error "reference image is not readable: ${reference}"
+        return 1
+    fi
+
+    request_file="$(mktemp "${STATE_DIR}/request.XXXXXX.json")" || return 1
+    generation_request_file="$request_file"
+    submit_file="$(mktemp "${STATE_DIR}/submit.XXXXXX.json")" || return 1
+    generation_submit_file="$submit_file"
+    status_file="$(mktemp "${STATE_DIR}/status.XXXXXX.json")" || return 1
+    generation_status_file="$status_file"
+
+    cleanup_generation() {
+        rm -f \
+            "$generation_request_file" \
+            "$generation_submit_file" \
+            "$generation_status_file" \
+            "$generation_reference_b64"
+        if [[ -n "$generation_job_id" && -r "$JOB_FILE" ]] \
+            && [[ "$(<"$JOB_FILE")" == "$generation_job_id" ]]; then
+            rm -f "$JOB_FILE"
+        fi
+    }
+
+    cancel_on_signal() {
+        if [[ -n "$generation_job_id" ]]; then
+            curl --silent --request POST \
+                "${API_URL}/sdcpp/v1/jobs/${generation_job_id}/cancel" >/dev/null 2>&1 || true
+        fi
+        exit 130
+    }
+
+    trap cleanup_generation EXIT
+    trap cancel_on_signal INT TERM
+
+    if [[ -n "$reference" ]]; then
+        reference_b64="$(mktemp "${STATE_DIR}/reference.XXXXXX.b64")" || return 1
+        generation_reference_b64="$reference_b64"
+        base64 --wrap=0 "$reference" > "$reference_b64" || return 1
+        reference_mime="$(file --brief --mime-type "$reference")"
+        jq --null-input \
+            --arg prompt "$prompt" \
+            --arg mime "$reference_mime" \
+            --argjson width "$width" \
+            --argjson height "$height" \
+            --argjson steps "$SAMPLE_STEPS" \
+            --rawfile image "$reference_b64" \
+            '{
+                prompt: $prompt,
+                width: $width,
+                height: $height,
+                seed: -1,
+                batch_count: 1,
+                auto_resize_ref_image: true,
+                vae_tiling: true,
+                output_format: "png",
+                ref_images: [("data:" + $mime + ";base64," + $image)],
+                sample_params: {
+                    sample_steps: $steps,
+                    sample_method: "euler",
+                    scheduler: "discrete",
+                    guidance: { txt_cfg: 1.0 }
+                }
+            }' > "$request_file" || return 1
+    else
+        jq --null-input \
+            --arg prompt "$prompt" \
+            --argjson width "$width" \
+            --argjson height "$height" \
+            --argjson steps "$SAMPLE_STEPS" \
+            '{
+                prompt: $prompt,
+                width: $width,
+                height: $height,
+                seed: -1,
+                batch_count: 1,
+                vae_tiling: true,
+                output_format: "png",
+                sample_params: {
+                    sample_steps: $steps,
+                    sample_method: "euler",
+                    scheduler: "discrete",
+                    guidance: { txt_cfg: 1.0 }
+                }
+            }' > "$request_file" || return 1
+    fi
+
+    http_code="$(
+        curl --silent --show-error \
+            --output "$submit_file" \
+            --write-out '%{http_code}' \
+            --header 'Content-Type: application/json' \
+            --data-binary "@${request_file}" \
+            "${API_URL}/sdcpp/v1/img_gen"
+    )" || return 1
+
+    if [[ "$http_code" != "202" ]]; then
+        message="$(jq -r '.error.message // .error // "request was rejected"' "$submit_file" 2>/dev/null)"
+        error "$message"
+        return 1
+    fi
+
+    job_id="$(jq -r '.id // empty' "$submit_file")"
+    generation_job_id="$job_id"
+    [[ "$job_id" =~ ^[A-Za-z0-9_-]+$ ]] || {
+        error "image server returned an invalid job id"
+        return 1
+    }
+    printf '%s\n' "$job_id" > "$JOB_FILE"
+    printf 'STATUS\tQueued\n'
+
+    for ((attempt = 0; attempt < 2400; attempt++)); do
+        if ! curl --fail --silent --show-error \
+            "${API_URL}/sdcpp/v1/jobs/${job_id}" \
+            --output "$status_file"; then
+            error "lost connection to image service"
+            return 1
+        fi
+
+        job_status="$(jq -r '.status // empty' "$status_file")"
+        if [[ "$job_status" != "$previous_status" ]]; then
+            case "$job_status" in
+                queued) printf 'STATUS\tQueued\n' ;;
+                generating) printf 'STATUS\tGenerating…\n' ;;
+            esac
+            previous_status="$job_status"
+        fi
+
+        case "$job_status" in
+            completed)
+                result_file="${STATE_DIR}/${MODEL_NAME}-${job_id}.png"
+                if ! jq -r '.result.images[0].b64_json // empty' "$status_file" \
+                    | base64 --decode > "$result_file"; then
+                    rm -f "$result_file"
+                    error "could not decode generated image"
+                    return 1
+                fi
+                [[ -s "$result_file" ]] || {
+                    rm -f "$result_file"
+                    error "image server returned an empty result"
+                    return 1
+                }
+                chmod 600 "$result_file"
+                printf 'RESULT\t%s\n' "$result_file"
+                return
+                ;;
+            failed)
+                message="$(jq -r '.error.message // "generation failed"' "$status_file")"
+                error "$message"
+                return 1
+                ;;
+            cancelled)
+                error "generation stopped"
+                return 130
+                ;;
+            queued|generating)
+                ;;
+            *)
+                error "image server returned unknown job status: ${job_status:-empty}"
+                return 1
+                ;;
+        esac
+
+        sleep 0.25
+    done
+
+    cancel_on_signal
+}
+
+output_directory() {
+    if [[ -r "$OUTPUT_DIR_FILE" ]]; then
+        head -n 1 "$OUTPUT_DIR_FILE"
+    else
+        printf '%s\n' "$DEFAULT_OUTPUT_DIR"
+    fi
+}
+
+set_output_directory() {
+    local directory="$1"
+
+    [[ -d "$directory" ]] || {
+        error "not a directory: ${directory}"
+        return 1
+    }
+    mkdir -p "$SETTINGS_DIR" || return 1
+    chmod 700 "$SETTINGS_DIR"
+    printf '%s\n' "$directory" > "$OUTPUT_DIR_FILE"
+    printf '%s\n' "$directory"
+}
+
+save_image() {
+    local source="$1"
+    local directory="${2:-}"
+    local date
+    local number
+    local destination
+
+    [[ -f "$source" ]] || {
+        error "generated image not found: ${source}"
+        return 1
+    }
+    [[ -n "$directory" ]] || directory="$(output_directory)"
+    mkdir -p "$directory" || return 1
+
+    date="$(date +%d-%m-%Y)"
+    for ((number = 1; number <= 9999; number++)); do
+        printf -v destination '%s/%s,%s-%03d.png' \
+            "$directory" "$MODEL_NAME" "$date" "$number"
+        if [[ ! -e "$destination" ]]; then
+            cp --no-clobber -- "$source" "$destination" || return 1
+            printf '%s\n' "$destination"
+            return
+        fi
+    done
+
+    error "no free incremental filename found in ${directory}"
+    return 1
+}
+
+copy_image() {
+    local source="$1"
+
+    require_command wl-copy || return 1
+    [[ -f "$source" ]] || {
+        error "generated image not found: ${source}"
+        return 1
+    }
+    wl-copy --type image/png < "$source"
+    printf 'Image copied to clipboard.\n'
+}
+
+show_logs() {
+    init_state_dir || return 1
+    [[ -f "$LOG_FILE" ]] || {
+        error "no server log exists yet"
+        return 1
+    }
+
+    case "${1:-}" in
+        "") tail -n 120 "$LOG_FILE" ;;
+        -f) tail -n 120 -f "$LOG_FILE" ;;
+        *)
+            error "usage: local-image-ai logs [-f]"
+            return 2
+            ;;
+    esac
+}
+
+main() {
+    local command="${1:-help}"
+    local size
+    shift || true
+
+    case "$command" in
+        start)
+            [[ $# -eq 0 ]] || return 2
+            start_server
+            ;;
+        status)
+            [[ $# -eq 0 ]] || return 2
+            status
+            ;;
+        stop)
+            [[ $# -eq 0 ]] || return 2
+            stop_server
+            ;;
+        generate)
+            size="1024x1024"
+            if [[ "${1:-}" == "--size" ]]; then
+                [[ $# -ge 3 && $# -le 4 ]] || {
+                    error "usage: local-image-ai generate [--size WxH] PROMPT [REFERENCE]"
+                    return 2
+                }
+                size="$2"
+                shift 2
+            fi
+            [[ $# -ge 1 && $# -le 2 ]] || {
+                error "usage: local-image-ai generate [--size WxH] PROMPT [REFERENCE]"
+                return 2
+            }
+            generate_image "$1" "${2:-}" "$size"
+            ;;
+        cancel)
+            [[ $# -eq 0 ]] || return 2
+            cancel_generation
+            ;;
+        copy)
+            [[ $# -eq 1 ]] || return 2
+            copy_image "$1"
+            ;;
+        output-dir)
+            [[ $# -eq 0 ]] || return 2
+            output_directory
+            ;;
+        set-output-dir)
+            [[ $# -eq 1 ]] || return 2
+            set_output_directory "$1"
+            ;;
+        save)
+            [[ $# -ge 1 && $# -le 2 ]] || return 2
+            save_image "$@"
+            ;;
+        logs)
+            [[ $# -le 1 ]] || return 2
+            show_logs "$@"
+            ;;
+        help|-h|--help)
+            usage
+            ;;
+        *)
+            error "unknown command: ${command}"
+            usage >&2
+            return 2
+            ;;
+    esac
+}
+
+main "$@"
